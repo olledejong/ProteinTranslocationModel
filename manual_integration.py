@@ -5,7 +5,7 @@ import pandas as pd
 from scipy.integrate import odeint
 from scipy.interpolate import CubicSpline, interp1d, UnivariateSpline
 
-file = "C:/Users/Olle de Jong/Documents/MSc Biology/MSB Research/Code and data/Data/Output/excel/final_averages_for_model.xlsx"
+file = "./averages.xlsx"
 averages = pd.read_excel(file)
 
 peak_of_nuc_vol = 80

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.integrate import odeint
 from scipy.interpolate import CubicSpline, interp1d, UnivariateSpline
 
-averages = pd.read_excel("C:/Users/Olle de Jong/Documents/MSc Biology/MSB Research/Code and data/Data/Output/excel/final_averages_for_model.xlsx")
+averages = pd.read_excel("C:/Users/Olle de Jong/Documents/MSc Biology/MSB Research/Code and data/Data/Output/excel/averages.xlsx")
 
 surface_areas = averages.cell_surface_areas.values
 nuc_vols = averages.cell_volumes.values
