@@ -66,12 +66,12 @@ def dptd(y, t, kd, kc, kImp, kExp):
     return [dC_dt, dN_dt]
 
 
-cell_vols, nuc_vols, nuc_surface_areas = load_data()  # load and alter the data
+cell_vols, nuc_vols, nuc_surface_areas = load_data()
 # interpolated vol/area functions for time dependent retrieval of values
 t_range = np.arange(len(nuc_surface_areas))
-a_func = interp1d(t_range, nuc_surface_areas, kind='cubic', bounds_error=False)
-cv_func = interp1d(t_range, cell_vols, kind='cubic', bounds_error=False)
-nv_func = interp1d(t_range, nuc_vols, kind='cubic', bounds_error=False)
+a_func = interp1d(t_range, nuc_surface_areas, kind='linear', bounds_error=False)
+cv_func = interp1d(t_range, cell_vols, kind='linear', bounds_error=False)
+nv_func = interp1d(t_range, nuc_vols, kind='linear', bounds_error=False)
 
 
 def main():
@@ -83,43 +83,29 @@ def main():
     # initial conditions
     cp0 = 91.08659014056978
     np0 = 28.248611459856743
-    t0 = 0
 
-    # final x-range and step to integrate over.
-    t_final = 100  # final t value
-    deltax = 0.05  # t-step
+    # solve the ode up until the event
+    tspan_before = np.linspace(0.0, 91, 200)
+    ini_cond = np.array([cp0, np0])
+    sols_before = odeint(dptd, ini_cond, tspan_before, args=(kd, kc, kin, kout))
 
+    # simulate event (reduce nuclear abundance)
+    perc_to_remove = (np.amax(nuc_vols) - nuc_vols[-1]) / np.amax(nuc_vols)  # reduction proportional to loss in nuc vol
+    sols_after_event = np.array([
+        sols_before[:, 0][-1],  # nothing happens to the cellular abundance at nuclear split
+        sols_before[:, 1][-1] - (sols_before[:, 1][-1] * perc_to_remove)  # remove the calc. percentage from the ab.
+    ])
 
-    # lists to store the results in
-    t = [t0]
-    sols_c = [cp0]
-    sols_n = [np0]
-    t2 = t0
+    # simulate part after the event
+    tspan_after = np.linspace(91, 98, 20)
+    sols_after = odeint(dptd, sols_after_event, tspan_after, args=(kd, kc, kin, kout))
 
-    # manually integrate at each time step, and check for event sign changes at each step
-    while t2 <= t_final:  # stop integrating at t_final
-        t1 = t[-1]
-        t2 = round(t1 + deltax, 2)
+    # final values (concatenated)
+    final_tspan = np.concatenate((tspan_before, tspan_after))
+    final_sols = np.concatenate((sols_before, sols_after))
 
-        prev_sols = np.array([sols_c[-1], sols_n[-1]])
-
-        # Event at t = 91, the nucleus is midway its division, so this is the point where we remove an equal part of
-        # the protein abundance as well.
-        if t2 == float(nuc_div_tp):
-            perc_to_remove = (np.amax(nuc_vols) - nuc_vols[-1]) / np.amax(nuc_vols)
-            prev_sols = np.array([sols_c[-1], sols_n[-1] - (sols_n[-1] * perc_to_remove)])
-
-        y_new = odeint(dptd, prev_sols, [t1, t2], args=(kd, kc, kin, kout))  # integrate from t1,sol1 to t2,sol2
-
-        t += [t2]
-
-        sols_c += [y_new[-1][0]]
-        sols_n += [y_new[-1][1]]
-
-    sols_c = [x for x in sols_c if str(x) != 'nan']
-    sols_n = [x for x in sols_n if str(x) != 'nan']
-
-    plotting.plot_abundances(t[:len(sols_c)], sols_c, sols_n)
+    # plot
+    plotting.plot_abundances(final_tspan, final_sols[:, 0], final_sols[:, 1])
 
 
 if __name__ == '__main__':
