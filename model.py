@@ -104,8 +104,10 @@ def main():
     final_tspan = np.concatenate((tspan_before, tspan_after))
     final_sols = np.concatenate((sols_before, sols_after))
 
-    # plot
+    # plotting
     plotting.plot_abundances(final_tspan, final_sols[:, 0], final_sols[:, 1])
+    plotting.plot_volume_ratio(t_range, nuc_vols, cell_vols)
+    plotting.plot_abundance_ratio(final_tspan, final_sols)
 
 
 if __name__ == '__main__':
