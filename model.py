@@ -62,14 +62,14 @@ def alter_data(averages):
 ###############################
 
 
-def dptd(y, t, kd, kc, kIn, kOut):
+def dp_dt(y, t, kd, kc, k_in, k_out):
     c, n = y  # cellular and nuclear abundance of protein
-    kIn_f = kIn / a_func(t)
-    kOut_f = kOut / a_func(t)
 
-    # system equations, describe the change in cellular and nuclear abundances
-    dC_dt = kc * 50 + a_func(t) * (-kIn_f * c / (cv_func(t) - nv_func(t)) + kOut_f * a_func(t) / nv_func(t)) - kd * c
-    dN_dt = a_func(t) * (kIn_f * c / (cv_func(t) - nv_func(t)) - kOut_f * n / nv_func(t)) - kd * n
+    # equations that describe the change in cellular and nuclear abundances
+    # dC/dt: (1) synthesis of protein (2) net transfer into the cyt (prop to nuc surf area) (3) deg. of prot in cyt
+    # dN/dt: (1) net transfer into the nucleus (proportional to nuc surf. area) (2) degradation of prot in nucleus
+    dC_dt = kc * 50 + a_func(t) * (-k_in * c / (cv_func(t) - nv_func(t)) + k_out * n / nv_func(t)) - kd * c
+    dN_dt = a_func(t) * (k_in * c / (cv_func(t) - nv_func(t)) - k_out * n / nv_func(t)) - kd * n
 
     return [dC_dt, dN_dt]
 
@@ -83,14 +83,15 @@ nv_func = interp1d(t_range, nuc_vols, kind='linear', bounds_error=False)
 
 
 def main():
-    kd = log(2)/35  # degradation rate for protein
+    # log(2)/10 is the rate of translocation, this is scaled by dividing it by the average nuclear surface
     kc = 0.6  # synthesis rate of protein in cytoplasm
-    kin = log(2)/10  # rate of translocation into nucleus
-    kout = log(2)/10  # rate of translocation out of nucleus
+    kd = log(2)/35  # degradation rate for protein
+    kIn = log(2)/10 / np.average(nuc_surface_areas)  # rate of translocation into nucleus
+    kOut = log(2)/10 / np.average(nuc_surface_areas)  # rate of translocation out of nucleus
 
     # initial conditions
-    cp0 = 1425.23317845
-    np0 = 50.99743377
+    cp0 = 1400
+    np0 = 55
 
     # generate split t_span to be able to simulate nuclear division event at 'nuc_div_tp'
     tspan_whole = np.linspace(0, 99, 200)
@@ -98,8 +99,7 @@ def main():
     tspan_before, tspan_after = np.split(tspan_whole, np.where(tspan_whole == closest)[0] + 1)
 
     # solve the ode up until the event
-    ini_cond = np.array([cp0, np0])
-    sols_before = odeint(dptd, ini_cond, tspan_before, args=(kd, kc, kin, kout))
+    sols_before = odeint(dp_dt, [cp0, np0], tspan_before, args=(kd, kc, kIn, kOut))
 
     # simulate event (reduce nuclear abundance)
     perc_to_remove = (np.amax(nuc_vols) - nuc_vols[-1]) / np.amax(nuc_vols)  # reduction proportional to loss in nuc vol
@@ -109,17 +109,26 @@ def main():
     ])
 
     # simulate part after the event
-    sols_after = odeint(dptd, sols_after_event, tspan_after, args=(kd, kc, kin, kout))
+    sols_after = odeint(dp_dt, sols_after_event, tspan_after, args=(kd, kc, kIn, kOut))
+    sols_after_cyt_ab = sols_after[:, 0][~np.isnan(sols_after[:, 0])]
+    sols_after_nuc_ab = sols_after[:, 1][~np.isnan(sols_after[:, 1])]
+
+    # simulate the bud separation event by reducing the cytoplasmic abundance in proportion to the volume loss
+    sols_after_cyt_ab[-1] = (1 - 0.28125901660197855) * sols_after_cyt_ab[-1]
+
+    # some nans are produced because the outcome of the n_func / cv_func / nv_func is unknown at the last few timepoints
+    num_nans = np.count_nonzero(np.isnan(sols_after[:, 0]))
 
     # final values (concatenated)
     final_tspan = np.concatenate((tspan_before, tspan_after))
-    final_sols = np.concatenate((sols_before, sols_after))
+    final_cyt_ab = np.concatenate((sols_before[:, 0], sols_after_cyt_ab))
+    final_nuc_ab = np.concatenate((sols_before[:, 1], sols_after_nuc_ab))
 
     # plotting
-    plotting.plot_abundances(final_tspan, final_sols[:, 0], final_sols[:, 1])
+    plotting.plot_abundances(final_tspan[:-num_nans], final_cyt_ab, final_nuc_ab)
     plotting.plot_volume_ratio(t_range, nuc_vols, cell_vols)
-    plotting.plot_abundance_ratio(final_tspan, final_sols)
-    plotting.plot_concentration_ratio(final_tspan, final_sols, cv_func, nv_func)
+    plotting.plot_abundance_ratio(final_tspan[:-num_nans], final_cyt_ab, final_nuc_ab)
+    plotting.plot_concentration_ratio(final_tspan, final_cyt_ab, final_nuc_ab, cv_func, nv_func, num_nans)
 
 
 if __name__ == '__main__':

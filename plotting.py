@@ -26,21 +26,19 @@ def plot_volume_ratio(t_range, nuc_vols, cell_vols):
     plt.show()
 
 
-def plot_abundance_ratio(final_tspan, final_sols):
-    plt.plot(final_tspan, final_sols[:, 1] / final_sols[:, 0], color='red', lw=2)
+def plot_abundance_ratio(final_tspan, final_cyt_ab, final_nuc_ab):
+    plt.plot(final_tspan, final_cyt_ab / final_nuc_ab, color='red', lw=2)
     plt.title("Nuclear to cytoplasmic abundance ratio")
     plt.xlabel("Time")
     plt.ylabel("Ratio")
     plt.show()
 
 
-def plot_concentration_ratio(final_tspan, final_sols, cv_func, nv_func):
+def plot_concentration_ratio(final_tspan, final_cyt_ab, final_nuc_ab, cv_func, nv_func, num_nans):
     # get cell / nuc volumes for all timepoints
-    num_nans = np.count_nonzero(np.isnan(final_sols[:, 0]))
     cell_vols = [cv_func(t).flatten()[0] for t in final_tspan][:-num_nans]
     nuc_vols = [nv_func(t).flatten()[0] for t in final_tspan][:-num_nans]
     cyt_vols = [i - j for i, j in zip(cell_vols, nuc_vols)]
-
 
     # with the abundances, the event is distinctly happening over one time-step, this is not the case for the volumes.
     # this is because the volumes are first manipulated to represent nuclear division at one time-step, but after that
@@ -48,13 +46,9 @@ def plot_concentration_ratio(final_tspan, final_sols, cv_func, nv_func):
     # therefore we need to slightly alter these to prevent plotting artifacts.
     nuc_vols[181:184] = [nuc_vols[180]] * len(nuc_vols[181:184])  # TODO make this dynamic (non-hardcoded indexes)
 
-    # get abundances
-    c_ab = final_sols[:, 0].tolist()[:-num_nans]
-    n_ab = final_sols[:, 1].tolist()[:-num_nans]
-
     # calculate the concentrations
-    c_con = [i / j for i, j in zip(c_ab, cyt_vols)]
-    n_con = [i / j for i, j in zip(n_ab, nuc_vols)]
+    c_con = [i / j for i, j in zip(final_cyt_ab.tolist(), cyt_vols)]
+    n_con = [i / j for i, j in zip(final_nuc_ab.tolist(), nuc_vols)]
 
     con_ratio = [i / j for i, j in zip(n_con, c_con)]
 
@@ -64,9 +58,6 @@ def plot_concentration_ratio(final_tspan, final_sols, cv_func, nv_func):
     plt.ylabel("Concentration")
     plt.show()
 
-    print(n_ab[180:185])
-    print(nuc_vols[180:185])
-    print(n_con[180:185])
     plt.plot(final_tspan[:-num_nans], n_con, c='red', lw=2)
     plt.title("Nuclear protein concentration")
     plt.xlabel("Time")
