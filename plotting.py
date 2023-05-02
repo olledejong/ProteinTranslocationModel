@@ -69,3 +69,19 @@ def plot_concentration_ratio(final_tspan, final_cyt_ab, final_nuc_ab, cv_func, n
     plt.xlabel("Time")
     plt.ylabel("Ratio")
     plt.show()
+
+
+def plot_multiple_cycles(cyt_ab_cycles, nuc_ab_cycles):
+    fig, ax1 = plt.subplots()
+    fig.suptitle("Cytoplasmic and nuclear protein abundances over time")
+    ax1.set_xlabel('Time')
+    ax1.grid(False)
+    ax1.set_ylabel("Cytoplasmic protein abundance", color='orange')
+    ax1.plot(cyt_ab_cycles, color='orange')
+    ax1.tick_params(axis='y', labelcolor='orange')
+    ax2 = ax1.twinx()
+    ax2.grid(False)
+    ax2.set_ylabel("Nuclear protein abundance", color='darkred')
+    ax2.plot(nuc_ab_cycles, color='darkred')
+    ax2.tick_params(axis='y', labelcolor='darkred')
+    plt.show()

@@ -90,45 +90,54 @@ def main():
     kOut = log(2)/10 / np.average(nuc_surface_areas)  # rate of translocation out of nucleus
 
     # initial conditions
-    cp0 = 1400
+    cp0 = 1100
     np0 = 55
 
-    # generate split t_span to be able to simulate nuclear division event at 'nuc_div_tp'
-    tspan_whole = np.linspace(0, 99, 200)
-    closest = find_nearest(tspan_whole, nuc_div_tp)
-    tspan_before, tspan_after = np.split(tspan_whole, np.where(tspan_whole == closest)[0] + 1)
+    mult_cycles_cyt, mult_cycles_nuc = [], []
 
-    # solve the ode up until the event
-    sols_before = odeint(dp_dt, [cp0, np0], tspan_before, args=(kd, kc, kIn, kOut))
+    for i in range(5):
+        # generate split t_span to be able to simulate nuclear division event at 'nuc_div_tp'
+        tspan_whole = np.linspace(0, 99, 200)
+        closest = find_nearest(tspan_whole, nuc_div_tp)
+        tspan_before, tspan_after = np.split(tspan_whole, np.where(tspan_whole == closest)[0] + 1)
 
-    # simulate event (reduce nuclear abundance)
-    perc_to_remove = (np.amax(nuc_vols) - nuc_vols[-1]) / np.amax(nuc_vols)  # reduction proportional to loss in nuc vol
-    sols_after_event = np.array([
-        sols_before[:, 0][-1],  # nothing happens to the cellular abundance at nuclear split
-        sols_before[:, 1][-1] - (sols_before[:, 1][-1] * perc_to_remove)  # remove the calc. percentage from the ab.
-    ])
+        # solve the ode up until the event
+        sols_before = odeint(dp_dt, [cp0, np0], tspan_before, args=(kd, kc, kIn, kOut))
 
-    # simulate part after the event
-    sols_after = odeint(dp_dt, sols_after_event, tspan_after, args=(kd, kc, kIn, kOut))
-    sols_after_cyt_ab = sols_after[:, 0][~np.isnan(sols_after[:, 0])]
-    sols_after_nuc_ab = sols_after[:, 1][~np.isnan(sols_after[:, 1])]
+        # simulate event (reduction of nuclear abundance proportional to loss in nuc vol)
+        perc_to_remove = (np.amax(nuc_vols) - nuc_vols[-1]) / np.amax(nuc_vols)
+        sols_after_event = np.array([
+            sols_before[:, 0][-1],  # nothing happens to the cellular abundance at nuclear split
+            sols_before[:, 1][-1] - (sols_before[:, 1][-1] * perc_to_remove)  # remove the calc. percentage from the ab.
+        ])
 
-    # simulate the bud separation event by reducing the cytoplasmic abundance in proportion to the volume loss
-    sols_after_cyt_ab[-1] = (1 - 0.28125901660197855) * sols_after_cyt_ab[-1]
+        # simulate part after the event
+        sols_after = odeint(dp_dt, sols_after_event, tspan_after, args=(kd, kc, kIn, kOut))
+        sols_after_cyt_ab = sols_after[:, 0][~np.isnan(sols_after[:, 0])]
+        sols_after_nuc_ab = sols_after[:, 1][~np.isnan(sols_after[:, 1])]
 
-    # some nans are produced because the outcome of the n_func / cv_func / nv_func is unknown at the last few timepoints
-    num_nans = np.count_nonzero(np.isnan(sols_after[:, 0]))
+        # simulate the bud separation event by reducing the cytoplasmic abundance in proportion to the volume loss
+        sols_after_cyt_ab[-1] = (1 - 0.28125901660197855) * sols_after_cyt_ab[-1]
 
-    # final values (concatenated)
-    final_tspan = np.concatenate((tspan_before, tspan_after))
-    final_cyt_ab = np.concatenate((sols_before[:, 0], sols_after_cyt_ab))
-    final_nuc_ab = np.concatenate((sols_before[:, 1], sols_after_nuc_ab))
+        # nans are produced because the outcome of the n_func / cv_func / nv_func is unknown at the last few timepoints
+        num_nans = np.count_nonzero(np.isnan(sols_after[:, 0]))
 
-    # plotting
-    plotting.plot_abundances(final_tspan[:-num_nans], final_cyt_ab, final_nuc_ab)
-    plotting.plot_volume_ratio(t_range, nuc_vols, cell_vols)
-    plotting.plot_abundance_ratio(final_tspan[:-num_nans], final_cyt_ab, final_nuc_ab)
-    plotting.plot_concentration_ratio(final_tspan, final_cyt_ab, final_nuc_ab, cv_func, nv_func, num_nans)
+        # final values (concatenated)
+        final_tspan = np.concatenate((tspan_before, tspan_after))
+        final_cyt_ab = np.concatenate((sols_before[:, 0], sols_after_cyt_ab))
+        final_nuc_ab = np.concatenate((sols_before[:, 1], sols_after_nuc_ab))
+        mult_cycles_cyt.extend(final_cyt_ab)
+        mult_cycles_nuc.extend(final_nuc_ab)
+        cp0 = final_cyt_ab[-1]
+        np0 = final_nuc_ab[-1]
+
+    plotting.plot_multiple_cycles(mult_cycles_cyt, mult_cycles_nuc)
+
+    # # plotting
+    # plotting.plot_abundances(final_tspan[:-num_nans], final_cyt_ab, final_nuc_ab)
+    # plotting.plot_volume_ratio(t_range, nuc_vols, cell_vols)
+    # plotting.plot_abundance_ratio(final_tspan[:-num_nans], final_cyt_ab, final_nuc_ab)
+    # plotting.plot_concentration_ratio(final_tspan, final_cyt_ab, final_nuc_ab, cv_func, nv_func, num_nans)
 
 
 if __name__ == '__main__':
