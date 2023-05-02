@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-import numpy as np
 
 
 def plot_abundances(tspan, y1, y2):
@@ -27,7 +26,7 @@ def plot_volume_ratio(t_range, nuc_vols, cell_vols):
 
 
 def plot_abundance_ratio(final_tspan, final_cyt_ab, final_nuc_ab):
-    plt.plot(final_tspan, final_cyt_ab / final_nuc_ab, color='red', lw=2)
+    plt.plot(final_tspan, final_nuc_ab / final_cyt_ab, color='red', lw=2)
     plt.title("Nuclear to cytoplasmic abundance ratio")
     plt.xlabel("Time")
     plt.ylabel("Ratio")
