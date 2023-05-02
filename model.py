@@ -13,7 +13,7 @@ nuc_div_tp = 91  # simulated point at which nuclear division takes place
 ### Data preparations ###
 #########################
 
-cell_vols, nuc_vols, nuc_surface_areas, t_range = None, None, None, None
+cell_vols, nuc_vols, nuc_surface_areas, t_range = [], [], [], None
 cell_vols: list
 nuc_vols: list
 nuc_surface_areas: list
@@ -107,7 +107,7 @@ def main():
     ########################
     kc = 0.6  # synthesis rate of protein in cytoplasm
     kd = log(2) / 35  # degradation rate for protein
-    kIn = log(2) / 10 / np.average(nuc_surface_areas)  # rate of translocation into nucleus
+    kIn = (log(2) / 10 / np.average(nuc_surface_areas)) * 4  # rate of translocation into nucleus
     kOut = log(2) / 10 / np.average(nuc_surface_areas)  # rate of translocation out of nucleus
     # log(2)/10 is the rate of translocation, this is scaled by dividing it by the average nuclear surface
 
@@ -165,7 +165,7 @@ def main():
 
     # plotting
     plotting.plot_abundances(final_tspan[:-num_nans], one_cycle_cyt, one_cycle_nuc)
-    plotting.plot_volume_ratio(t_range, nuc_vols, cell_vols)
+    plotting.plot_volume_ratio(t_range * time_scalar, nuc_vols, cell_vols)
     plotting.plot_abundance_ratio(final_tspan[:-num_nans], one_cycle_cyt, one_cycle_nuc)
     plotting.plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func, nv_func, num_nans)
     plotting.plot_multiple_cycles(final_tspan, mult_cycles_cyt, mult_cycles_nuc, num_cycles)
