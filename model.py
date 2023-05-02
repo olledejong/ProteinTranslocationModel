@@ -9,10 +9,10 @@ from scipy.interpolate import CubicSpline, interp1d, UnivariateSpline
 peak_of_nuc_vol = 81  # the latest local high of the nuclear volume
 nuc_div_tp = 91  # simulated point at which nuclear division takes place
 
-#########################
-### Data preparations ###
-#########################
 
+########################
+### Global variables ###
+########################
 cell_vols, nuc_vols, nuc_surface_areas, t_range = [], [], [], None
 cell_vols: list
 nuc_vols: list
@@ -20,6 +20,9 @@ nuc_surface_areas: list
 a_func, cv_func, nv_func = None, None, None
 
 
+#########################
+### Data preparations ###
+#########################
 def load_and_adjust_data():
     """
     Loads data from the averages file, calls the alter_data function and returns the outcome.
@@ -76,23 +79,27 @@ def find_nearest(array, value):
     return array[idx]
 
 
-###############################
-### The model & simulations ###
-###############################
-
-
-def dp_dt(y, t, k_deg, k_synt, k_in, k_out):
-    c, n = y  # cellular and nuclear abundance of protein
+#################
+### The model ###
+#################
+def dp_dt(y, t, k_d, k_s, k_in, k_out):
+    C, N = y  # cellular and nuclear abundance of protein
+    A = a_func(t)  # nuclear surface area at t
+    Vc = cv_func(t)  # whole cell volume at t
+    Vn = nv_func(t)  # nuclear volume at t
 
     # equations that describe the change in cellular and nuclear abundances
     # dC/dt: (1) synthesis of protein (2) net transfer into the cyt (prop to nuc surf area) (3) deg. of prot in cyt
     # dN/dt: (1) net transfer into the nucleus (proportional to nuc surf. area) (2) degradation of prot in nucleus
-    dC_dt = k_synt * 50 + a_func(t) * (-k_in * c / (cv_func(t) - nv_func(t)) + k_out * n / nv_func(t)) - k_deg * c
-    dN_dt = a_func(t) * (k_in * c / (cv_func(t) - nv_func(t)) - k_out * n / nv_func(t)) - k_deg * n
+    dC_dt = k_s * 50 + A * (-k_in * C / (Vc - Vn) + k_out * N / Vn) - k_d * C
+    dN_dt = A * (k_in * C / (Vc - Vn) - k_out * N / Vn) - k_d * N
 
     return [dC_dt, dN_dt]
 
 
+###########################
+### Running simulations ###
+###########################
 def main():
     load_and_adjust_data()
     define_area_vol_functions()
@@ -112,12 +119,11 @@ def main():
     # log(2)/10 is the rate of translocation, this is scaled by dividing it by the average nuclear surface
 
     # initial conditions
-    cp0 = 1050
-    np0 = 50
+    cp0 = 1000
+    np0 = 175
 
     mult_cycles_cyt, mult_cycles_nuc = [], []
 
-    # perform five consecutive simulations
     for i in range(num_cycles):
         # generate split t_span to be able to simulate nuclear division event at 'nuc_div_tp'
         tspan_whole = np.linspace(0, 99, num_datapoints)
@@ -126,12 +132,14 @@ def main():
 
         # solve the ode up until the event
         sols_before = odeint(dp_dt, [cp0, np0], tspan_before, args=(kd, kc, kIn, kOut))
+        sols_bf_ev_cyt_ab = sols_before[:, 0]
+        sols_bf_ev_nuc_ab = sols_before[:, 1]
 
         # simulate event (reduction of nuclear abundance proportional to loss in nuc vol)
         perc_to_remove = (np.amax(nuc_vols) - nuc_vols[-1]) / np.amax(nuc_vols)
         sols_after_event = np.array([
-            sols_before[:, 0][-1],  # nothing happens to the cellular abundance at nuclear split
-            sols_before[:, 1][-1] - (sols_before[:, 1][-1] * perc_to_remove)  # remove the calc. percentage from the ab.
+            sols_bf_ev_cyt_ab[-1],  # nothing happens to the cellular abundance at nuclear split
+            sols_bf_ev_nuc_ab[-1] - (sols_bf_ev_nuc_ab[-1] * perc_to_remove)  # remove the calc. percentage from the ab.
         ])
 
         # simulate part after the event
@@ -177,4 +185,4 @@ if __name__ == '__main__':
 
 # NOTES
 # From the volume analysis script: Average cycle duration: 14.270588235294118 frames, which is equal
-# to 71.3529411764706 minutes. The data is interpolated to 100 datapoints, meaning that every datapoint is 0.7 minutes.
+# to 71.3529411764706 minutes. The data is interpolated to 100 datapoints, meaning that every datapoint is 0.716 minutes
