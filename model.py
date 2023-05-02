@@ -9,13 +9,18 @@ from scipy.interpolate import CubicSpline, interp1d, UnivariateSpline
 peak_of_nuc_vol = 81  # the latest local high of the nuclear volume
 nuc_div_tp = 91  # simulated point at which nuclear division takes place
 
+#########################
+### Data preparations ###
+#########################
+
 cell_vols, nuc_vols, nuc_surface_areas, t_range = None, None, None, None
-a_func: None
-cv_func: None
-nv_func: None
+cell_vols: list
+nuc_vols: list
+nuc_surface_areas: list
+a_func, cv_func, nv_func = None, None, None
 
 
-def load_data():
+def load_and_adjust_data():
     """
     Loads data from the averages file, calls the alter_data function and returns the outcome.
     :return:
@@ -55,7 +60,7 @@ def alter_data(averages):
     nuc_surface_areas = nsa
 
 
-def create_funcs():
+def define_area_vol_functions():
     global a_func, cv_func, nv_func, t_range
     # interpolated vol/area functions for time dependent retrieval of values
     t_range = np.arange(len(nuc_surface_areas))
@@ -64,9 +69,6 @@ def create_funcs():
     nv_func = interp1d(t_range, nuc_vols, kind='linear', bounds_error=False)
 
 
-#########################
-### Data preparations ###
-#########################
 
 def find_nearest(array, value):
     array = np.asarray(array)
@@ -92,8 +94,13 @@ def dp_dt(y, t, k_deg, k_synt, k_in, k_out):
 
 
 def main():
-    load_data()
-    create_funcs()
+    load_and_adjust_data()
+    define_area_vol_functions()
+
+    num_cycles = 5  # number of cycles to include in the multiple-cycles plot
+    num_datapoints = 200  # the desired number of datapoints that is solved for within the time-axis
+    vol_loss_frac = 0.28125901660197855  # fraction of total volume that on average is lost to the daughter bud
+    time_scalar = 0.7135  # scalar based on average duration of cycle to scale back to real minute axis
 
     ########################
     ### Model parameters ###
@@ -111,9 +118,9 @@ def main():
     mult_cycles_cyt, mult_cycles_nuc = [], []
 
     # perform five consecutive simulations
-    for i in range(5):
+    for i in range(num_cycles):
         # generate split t_span to be able to simulate nuclear division event at 'nuc_div_tp'
-        tspan_whole = np.linspace(0, 99, 200)
+        tspan_whole = np.linspace(0, 99, num_datapoints)
         closest = find_nearest(tspan_whole, nuc_div_tp)
         tspan_before, tspan_after = np.split(tspan_whole, np.where(tspan_whole == closest)[0] + 1)
 
@@ -134,7 +141,7 @@ def main():
 
         # simulate the bud separation event by reducing the cytoplasmic abundance in proportion to the volume loss
         # percentage (0.281..) determined using the volume analysis pipeline
-        sols_after_cyt_ab[-1] = (1 - 0.28125901660197855) * sols_after_cyt_ab[-1]
+        sols_after_cyt_ab[-1] = (1 - vol_loss_frac) * sols_after_cyt_ab[-1]
 
         # nans are produced because the outcome of the n_func / cv_func / nv_func is unknown at the last few timepoints
         num_nans = np.count_nonzero(np.isnan(sols_after[:, 0]))
@@ -142,7 +149,8 @@ def main():
         final_tspan = np.concatenate((tspan_before, tspan_after))  # merge the two split t-spans
         # according to the volume analysis script, the average duration of one cycle is 71.35 minutes.
         # let's modify the time-axis using this knowledge (for purpose of plotting on a real time axis)
-        final_tspan = final_tspan * 0.7135
+        final_tspan = final_tspan * time_scalar
+
         final_cyt_ab = np.concatenate((sols_before[:, 0], sols_after_cyt_ab))
         final_nuc_ab = np.concatenate((sols_before[:, 1], sols_after_nuc_ab))
         mult_cycles_cyt.extend(final_cyt_ab)
@@ -152,17 +160,15 @@ def main():
         cp0 = final_cyt_ab[-1]
         np0 = final_nuc_ab[-1]
 
-    one_cycle_cyt = np.array(mult_cycles_cyt[(198*4)-1:])
-    one_cycle_nuc = np.array(mult_cycles_nuc[(198*4)-1:])
+    one_cycle_cyt = np.array(mult_cycles_cyt[len(mult_cycles_cyt)-num_datapoints+2:])
+    one_cycle_nuc = np.array(mult_cycles_nuc[len(mult_cycles_cyt)-num_datapoints+2:])
 
     # plotting
-    print(len(final_tspan[:-num_nans]))
-    print(len(one_cycle_cyt))
     plotting.plot_abundances(final_tspan[:-num_nans], one_cycle_cyt, one_cycle_nuc)
     plotting.plot_volume_ratio(t_range, nuc_vols, cell_vols)
     plotting.plot_abundance_ratio(final_tspan[:-num_nans], one_cycle_cyt, one_cycle_nuc)
     plotting.plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func, nv_func, num_nans)
-    plotting.plot_multiple_cycles(mult_cycles_cyt, mult_cycles_nuc)
+    plotting.plot_multiple_cycles(final_tspan, mult_cycles_cyt, mult_cycles_nuc, num_cycles)
 
 
 if __name__ == '__main__':
