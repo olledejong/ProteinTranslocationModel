@@ -91,7 +91,7 @@ def dp_dt(y, t, k_d, k_s, k_in, k_out):
     # equations that describe the change in cellular and nuclear abundances
     # dC/dt: (1) synthesis of protein (2) net transfer into the cyt (prop to nuc surf area) (3) deg. of prot in cyt
     # dN/dt: (1) net transfer into the nucleus (proportional to nuc surf. area) (2) degradation of prot in nucleus
-    dC_dt = k_s * 50 + A * (-k_in * C / (Vc - Vn) + k_out * N / Vn) - k_d * C
+    dC_dt = k_s * 20 + A * (-k_in * C / (Vc - Vn) + k_out * N / Vn) - k_d * C
     dN_dt = A * (k_in * C / (Vc - Vn) - k_out * N / Vn) - k_d * N
 
     return [dC_dt, dN_dt]
@@ -109,21 +109,20 @@ def main():
     vol_loss_frac = 0.28125901660197855  # fraction of total volume that on average is lost to the daughter bud
     time_scalar = 0.7135  # scalar based on average duration of cycle to scale back to real minute axis
 
-    ########################
     ### Model parameters ###
-    ########################
-    kc = 0.6  # synthesis rate of protein in cytoplasm
+
+    kc = 0.25  # synthesis rate of protein in cytoplasm
     kd = log(2) / 35  # degradation rate for protein
-    kIn = (log(2) / 10 / np.average(nuc_surface_areas)) * 4  # rate of translocation into nucleus
+    kIn = log(2) / 10 / np.average(nuc_surface_areas)  # rate of translocation into nucleus
     kOut = log(2) / 10 / np.average(nuc_surface_areas)  # rate of translocation out of nucleus
     # log(2)/10 is the rate of translocation, this is scaled by dividing it by the average nuclear surface
 
     # initial conditions
     cp0 = 1000
-    np0 = 175
+    np0 = 60
 
+    ### Running simulations ###
     mult_cycles_cyt, mult_cycles_nuc = [], []
-
     for i in range(num_cycles):
         # generate split t_span to be able to simulate nuclear division event at 'nuc_div_tp'
         tspan_whole = np.linspace(0, 99, num_datapoints)
@@ -132,24 +131,24 @@ def main():
 
         # solve the ode up until the event
         sols_before = odeint(dp_dt, [cp0, np0], tspan_before, args=(kd, kc, kIn, kOut))
-        sols_bf_ev_cyt_ab = sols_before[:, 0]
-        sols_bf_ev_nuc_ab = sols_before[:, 1]
+        sols_bf_ev_cyt = sols_before[:, 0]
+        sols_bf_ev_nuc = sols_before[:, 1]
 
         # simulate event (reduction of nuclear abundance proportional to loss in nuc vol)
         perc_to_remove = (np.amax(nuc_vols) - nuc_vols[-1]) / np.amax(nuc_vols)
         sols_after_event = np.array([
-            sols_bf_ev_cyt_ab[-1],  # nothing happens to the cellular abundance at nuclear split
-            sols_bf_ev_nuc_ab[-1] - (sols_bf_ev_nuc_ab[-1] * perc_to_remove)  # remove the calc. percentage from the ab.
+            sols_bf_ev_cyt[-1],  # nothing happens to the cellular abundance at nuclear split
+            sols_bf_ev_nuc[-1] - (sols_bf_ev_nuc[-1] * perc_to_remove)  # remove the calc. percentage from the ab.
         ])
 
         # simulate part after the event
         sols_after = odeint(dp_dt, sols_after_event, tspan_after, args=(kd, kc, kIn, kOut))
-        sols_after_cyt_ab = sols_after[:, 0][~np.isnan(sols_after[:, 0])]
-        sols_after_nuc_ab = sols_after[:, 1][~np.isnan(sols_after[:, 1])]
+        sols_after_cyt = sols_after[:, 0][~np.isnan(sols_after[:, 0])]
+        sols_after_nuc = sols_after[:, 1][~np.isnan(sols_after[:, 1])]
 
         # simulate the bud separation event by reducing the cytoplasmic abundance in proportion to the volume loss
         # percentage (0.281..) determined using the volume analysis pipeline
-        sols_after_cyt_ab[-1] = (1 - vol_loss_frac) * sols_after_cyt_ab[-1]
+        sols_after_cyt[-1] = (1 - vol_loss_frac) * sols_after_cyt[-1]
 
         # nans are produced because the outcome of the n_func / cv_func / nv_func is unknown at the last few timepoints
         num_nans = np.count_nonzero(np.isnan(sols_after[:, 0]))
@@ -159,17 +158,16 @@ def main():
         # let's modify the time-axis using this knowledge (for purpose of plotting on a real time axis)
         final_tspan = final_tspan * time_scalar
 
-        final_cyt_ab = np.concatenate((sols_before[:, 0], sols_after_cyt_ab))
-        final_nuc_ab = np.concatenate((sols_before[:, 1], sols_after_nuc_ab))
+        final_cyt_ab = np.concatenate((sols_before[:, 0], sols_after_cyt))
+        final_nuc_ab = np.concatenate((sols_before[:, 1], sols_after_nuc))
         mult_cycles_cyt.extend(final_cyt_ab)
         mult_cycles_nuc.extend(final_nuc_ab)
 
         # set the initial condition for the next loop to the final values
-        cp0 = final_cyt_ab[-1]
-        np0 = final_nuc_ab[-1]
+        cp0, np0 = final_cyt_ab[-1], final_nuc_ab[-1]
 
-    one_cycle_cyt = np.array(mult_cycles_cyt[len(mult_cycles_cyt)-num_datapoints+2:])
-    one_cycle_nuc = np.array(mult_cycles_nuc[len(mult_cycles_cyt)-num_datapoints+2:])
+    one_cycle_cyt = np.array(mult_cycles_cyt[len(mult_cycles_cyt)-num_datapoints+num_nans:])
+    one_cycle_nuc = np.array(mult_cycles_nuc[len(mult_cycles_cyt)-num_datapoints+num_nans:])
 
     # plotting
     plotting.plot_abundances(final_tspan[:-num_nans], one_cycle_cyt, one_cycle_nuc)
