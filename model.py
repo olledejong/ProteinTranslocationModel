@@ -108,20 +108,18 @@ def main():
 
     num_cycles = 5  # number of cycles to include in the multiple-cycles plot
     num_datapoints = 200  # the desired number of datapoints that is solved for within the time-axis
-    vol_loss_frac = 0.28125901660197855  # fraction of total volume that on average is lost to the daughter bud
-    time_scalar = 0.7135  # scalar based on average duration of cycle to scale back to real minute axis
+    vol_loss_frac = 1 - cell_vols[-1] / cell_vols[-4]  # fraction of volume that is lost to the daughter bud
+    print(f"The percentage of whole-cell volume that is lost at division (end of cycle) is {round(vol_loss_frac * 100, 2)}")
 
     ### Model parameters ###
-
     kc = 0.25  # synthesis rate of protein in cytoplasm
     kd = log(2) / 35  # degradation rate for protein
     kIn = log(2) / 10 / np.average(nuc_surface_areas)  # rate of translocation into nucleus
     kOut = log(2) / 10 / np.average(nuc_surface_areas)  # rate of translocation out of nucleus
     # log(2)/10 is the rate of translocation, this is scaled by dividing it by the average nuclear surface
 
-    # initial conditions
-    cp0 = 200
-    np0 = 10
+    cp0 = 200  # initial cytoplasmic protein abundance
+    np0 = 10  # initial nuclear protein abundance
 
     ### Running simulations ###
     mult_cycles_cyt, mult_cycles_nuc = [], []
@@ -169,8 +167,6 @@ def main():
 
     # plotting
     plotting.plot_abundances(final_tspan, one_cycle_cyt, one_cycle_nuc)
-    # plotting.plot_volume_ratio(t_range, nuc_vols, cell_vols)
-    # plotting.plot_abundance_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc)
     plotting.plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func, nv_func)
     plotting.plot_multiple_cycles(final_tspan, mult_cycles_cyt, mult_cycles_nuc, num_cycles)
 

@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+time_scalar = 0.7135  # scalar based on average duration of cycle to scale back to real minute axis
+
 
 def plot_abundances(tspan, y1, y2):
     fig, ax1 = plt.subplots()
@@ -8,29 +10,13 @@ def plot_abundances(tspan, y1, y2):
     ax1.set_xlabel('Time (minutes)')
     ax1.grid(False)
     ax1.set_ylabel("Cytoplasmic protein abundance", color='orange')
-    ax1.plot(tspan, y1, color='orange')
+    ax1.plot(tspan * time_scalar, y1, color='orange')
     ax1.tick_params(axis='y', labelcolor='orange')
     ax2 = ax1.twinx()
     ax2.grid(False)
     ax2.set_ylabel("Nuclear protein abundance", color='darkred')
-    ax2.plot(tspan, y2, color='darkred')
+    ax2.plot(tspan * time_scalar, y2, color='darkred')
     ax2.tick_params(axis='y', labelcolor='darkred')
-    plt.show()
-
-
-def plot_volume_ratio(t_range, nuc_vols, cell_vols):
-    plt.plot(t_range, nuc_vols / (cell_vols - nuc_vols), color='darkred', lw=2)
-    plt.title("Nuclear to cytoplasmic volume ratio")
-    plt.xlabel("Time (minutes)")
-    plt.ylabel("Ratio")
-    plt.show()
-
-
-def plot_abundance_ratio(final_tspan, final_cyt_ab, final_nuc_ab):
-    plt.plot(final_tspan, final_nuc_ab / final_cyt_ab, color='darkred', lw=2)
-    plt.title("Nuclear to cytoplasmic abundance ratio")
-    plt.xlabel("Time (minutes)")
-    plt.ylabel("Ratio")
     plt.show()
 
 
@@ -47,25 +33,28 @@ def plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func,
     nuc_vols[181:184] = [nuc_vols[180]] * len(nuc_vols[181:184])  # TODO make this dynamic (non-hardcoded indexes)
     cyt_vols[-2] = cyt_vols[-3]
 
+    print(np.array(cyt_vols))
+    print(one_cycle_cyt)
+
     # calculate the concentrations
     c_con = [i / j for i, j in zip(one_cycle_cyt.tolist(), cyt_vols)]
     n_con = [i / j for i, j in zip(one_cycle_nuc.tolist(), nuc_vols)]
 
     con_ratio = [i / j for i, j in zip(n_con, c_con)]
 
-    plt.plot(final_tspan, c_con, c='darkred', lw=2)
+    plt.plot(final_tspan * time_scalar, c_con, c='darkred', lw=2)
     plt.title("Cytoplasmic protein concentration")
     plt.xlabel("Time (minutes)")
     plt.ylabel("Concentration")
     plt.show()
 
-    plt.plot(final_tspan, n_con, c='darkred', lw=2)
+    plt.plot(final_tspan * time_scalar, n_con, c='darkred', lw=2)
     plt.title("Nuclear protein concentration")
     plt.xlabel("Time (minutes)")
     plt.ylabel("Concentration")
     plt.show()
 
-    plt.plot(final_tspan, con_ratio, c='darkred', lw=2)
+    plt.plot(final_tspan * time_scalar, con_ratio, c='darkred', lw=2)
     plt.title("Nuclear to cytoplasmic protein concentration ratio")
     plt.xlabel("Time (minutes)")
     plt.ylabel("Ratio")
@@ -79,11 +68,11 @@ def plot_multiple_cycles(final_tspan, cyt_ab_cycles, nuc_ab_cycles, num_cycles):
     ax1.set_xlabel('Time (minutes)')
     ax1.grid(False)
     ax1.set_ylabel("Cytoplasmic protein abundance", color='orange')
-    ax1.plot(t_axis, cyt_ab_cycles, color='orange')
+    ax1.plot(t_axis * time_scalar, cyt_ab_cycles, color='orange')
     ax1.tick_params(axis='y', labelcolor='orange')
     ax2 = ax1.twinx()
     ax2.grid(False)
     ax2.set_ylabel("Nuclear protein abundance", color='darkred')
-    ax2.plot(t_axis, nuc_ab_cycles, color='darkred')
+    ax2.plot(t_axis * time_scalar, nuc_ab_cycles, color='darkred')
     ax2.tick_params(axis='y', labelcolor='darkred')
     plt.show()
