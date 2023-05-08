@@ -14,9 +14,6 @@ nuc_div_tp = 91  # simulated point at which nuclear division takes place
 ### Global variables ###
 ########################
 cell_vols, nuc_vols, nuc_surface_areas, t_range = [], [], [], None
-cell_vols: list
-nuc_vols: list
-nuc_surface_areas: list
 a_func, cv_func, nv_func = None, None, None
 
 
@@ -47,16 +44,21 @@ def alter_data(averages):
 
     # nuclear volume over time (altered to simulate instant nuclear division)
     nv = averages.nuc_volumes.values
-    nv[peak_of_nuc_vol:nuc_div_tp] = nv[peak_of_nuc_vol]
-    nv[nuc_div_tp:] = [nv[-1]] * len(nv[nuc_div_tp:])
+    nv[peak_of_nuc_vol:nuc_div_tp] = nv[peak_of_nuc_vol]  # up until nuc div, the nuc vol stays constant at its high
+    nv[nuc_div_tp:] = [nv[0]] * len(nv[nuc_div_tp:])  # after nuclear separation, the volume returns to the starting val
+    nv = np.append(nv, [nv[0], nv[0]])
 
     # nuclear surface area over time (altered such that it simulates a proportional decrease compared to nuclear volume)
+    # basically the same as done above
     nsa = averages.nuc_surface_areas.values
     nsa[peak_of_nuc_vol:nuc_div_tp] = nsa[peak_of_nuc_vol]
-    nsa[nuc_div_tp:] = [nsa[-1]] * len(nsa[nuc_div_tp:])
+    nsa[nuc_div_tp:] = [nsa[0]] * len(nsa[nuc_div_tp:])
+    nsa = np.append(nsa, [nsa[0], nsa[0]])
 
     # whole-cell volumes
     cv = averages.cell_volumes.values
+    cv[-1] = cv[0]  # the whole-cell volume is equal at beginning and start
+    cv = np.append(cv, [cv[0], cv[0]])
 
     cell_vols = cv
     nuc_vols = nv
@@ -118,8 +120,8 @@ def main():
     # log(2)/10 is the rate of translocation, this is scaled by dividing it by the average nuclear surface
 
     # initial conditions
-    cp0 = 1000
-    np0 = 60
+    cp0 = 200
+    np0 = 10
 
     ### Running simulations ###
     mult_cycles_cyt, mult_cycles_nuc = [], []
@@ -150,13 +152,9 @@ def main():
         # percentage (0.281..) determined using the volume analysis pipeline
         sols_after_cyt[-1] = (1 - vol_loss_frac) * sols_after_cyt[-1]
 
-        # nans are produced because the outcome of the n_func / cv_func / nv_func is unknown at the last few timepoints
-        num_nans = np.count_nonzero(np.isnan(sols_after[:, 0]))
-
         final_tspan = np.concatenate((tspan_before, tspan_after))  # merge the two split t-spans
         # according to the volume analysis script, the average duration of one cycle is 71.35 minutes.
         # let's modify the time-axis using this knowledge (for purpose of plotting on a real time axis)
-        final_tspan = final_tspan * time_scalar
 
         final_cyt_ab = np.concatenate((sols_before[:, 0], sols_after_cyt))
         final_nuc_ab = np.concatenate((sols_before[:, 1], sols_after_nuc))
@@ -166,14 +164,14 @@ def main():
         # set the initial condition for the next loop to the final values
         cp0, np0 = final_cyt_ab[-1], final_nuc_ab[-1]
 
-    one_cycle_cyt = np.array(mult_cycles_cyt[len(mult_cycles_cyt)-num_datapoints+num_nans:])
-    one_cycle_nuc = np.array(mult_cycles_nuc[len(mult_cycles_cyt)-num_datapoints+num_nans:])
+    one_cycle_cyt = np.array(mult_cycles_cyt[len(mult_cycles_cyt)-num_datapoints:])
+    one_cycle_nuc = np.array(mult_cycles_nuc[len(mult_cycles_cyt)-num_datapoints:])
 
     # plotting
-    plotting.plot_abundances(final_tspan[:-num_nans], one_cycle_cyt, one_cycle_nuc)
-    plotting.plot_volume_ratio(t_range * time_scalar, nuc_vols, cell_vols)
-    plotting.plot_abundance_ratio(final_tspan[:-num_nans], one_cycle_cyt, one_cycle_nuc)
-    plotting.plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func, nv_func, num_nans)
+    plotting.plot_abundances(final_tspan, one_cycle_cyt, one_cycle_nuc)
+    # plotting.plot_volume_ratio(t_range, nuc_vols, cell_vols)
+    # plotting.plot_abundance_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc)
+    plotting.plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func, nv_func)
     plotting.plot_multiple_cycles(final_tspan, mult_cycles_cyt, mult_cycles_nuc, num_cycles)
 
 
