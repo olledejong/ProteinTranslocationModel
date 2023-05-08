@@ -33,9 +33,6 @@ def plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func,
     nuc_vols[181:184] = [nuc_vols[180]] * len(nuc_vols[181:184])  # TODO make this dynamic (non-hardcoded indexes)
     cyt_vols[-2] = cyt_vols[-3]
 
-    print(np.array(cyt_vols))
-    print(one_cycle_cyt)
-
     # calculate the concentrations
     c_con = [i / j for i, j in zip(one_cycle_cyt.tolist(), cyt_vols)]
     n_con = [i / j for i, j in zip(one_cycle_nuc.tolist(), nuc_vols)]
