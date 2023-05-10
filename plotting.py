@@ -1,12 +1,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
+plt.style.use('seaborn-v0_8-dark')
 
 time_scalar = 0.7135  # scalar based on average duration of cycle to scale back to real minute axis
 
-
-def plot_abundances(tspan, y1, y2):
+def plot_abundances(tspan, y1, y2, params):
     fig, ax1 = plt.subplots()
-    fig.suptitle("Cytoplasmic and nuclear protein abundances over time")
+    fig.suptitle(f"Cytoplasmic and nuclear protein abundances over time\nParams: {params}")
     ax1.set_xlabel('Time (minutes)')
     ax1.grid(False)
     ax1.set_ylabel("Cytoplasmic protein abundance", color='orange')
@@ -20,7 +20,7 @@ def plot_abundances(tspan, y1, y2):
     plt.show()
 
 
-def plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func, nv_func):
+def plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func, nv_func, params):
     # get cell / nuc volumes for all timepoints
     cell_vols = [cv_func(t).flatten()[0] for t in final_tspan]
     nuc_vols = [nv_func(t).flatten()[0] for t in final_tspan]
@@ -40,28 +40,28 @@ def plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func,
     con_ratio = [i / j for i, j in zip(n_con, c_con)]
 
     plt.plot(final_tspan * time_scalar, c_con, c='darkred', lw=2)
-    plt.title("Cytoplasmic protein concentration")
+    plt.title(f"Cytoplasmic protein concentration\nParams: {params}")
     plt.xlabel("Time (minutes)")
     plt.ylabel("Concentration")
     plt.show()
 
     plt.plot(final_tspan * time_scalar, n_con, c='darkred', lw=2)
-    plt.title("Nuclear protein concentration")
+    plt.title(f"Nuclear protein concentration\nParams: {params}")
     plt.xlabel("Time (minutes)")
     plt.ylabel("Concentration")
     plt.show()
 
     plt.plot(final_tspan * time_scalar, con_ratio, c='darkred', lw=2)
-    plt.title("Nuclear to cytoplasmic protein concentration ratio")
+    plt.title(f"Nuclear to cytoplasmic protein concentration ratio\nParams: {params}")
     plt.xlabel("Time (minutes)")
     plt.ylabel("Ratio")
     plt.show()
 
 
-def plot_multiple_cycles(final_tspan, cyt_ab_cycles, nuc_ab_cycles, num_cycles):
+def plot_multiple_cycles(final_tspan, cyt_ab_cycles, nuc_ab_cycles, num_cycles, params):
     t_axis = np.linspace(0, final_tspan[-1] * num_cycles, len(cyt_ab_cycles))
     fig, ax1 = plt.subplots()
-    fig.suptitle("Cytoplasmic and nuclear protein abundances over time (multiple cycles)")
+    fig.suptitle(f"Cytoplasmic and nuclear protein abundances over time (multiple cycles)\nParams: {params}")
     ax1.set_xlabel('Time (minutes)')
     ax1.grid(False)
     ax1.set_ylabel("Cytoplasmic protein abundance", color='orange')
