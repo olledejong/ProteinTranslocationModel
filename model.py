@@ -16,7 +16,7 @@ kOut = log(2) / 10  # rate of translocation out of nucleus
 peak_of_nuc_vol = 81  # position of the latest local high of the nuclear volume
 nuc_div_tp = 91  # simulated point at which nuclear division takes place
 
-num_cycles = 5  # number of cycles to include in the multiple-cycles plot
+num_cycles = 6  # number of cycles to include in the multiple-cycles plot
 num_datapoints = 200  # the desired number of datapoints that is solved for within the time-axis
 
 ########################
@@ -25,9 +25,10 @@ num_datapoints = 200  # the desired number of datapoints that is solved for with
 cell_vols, nuc_vols, nuc_surface_areas = [], [], []
 a_func, cv_func, nv_func = None, None, None
 
-#########################
-### Data preparations ###
-#########################
+                                            ########################
+                                            ### Data preparation ###
+                                            ########################
+
 def load_and_adjust_data():
     """
     Takes the by the script exported averages and alters these based on various assumptions:
@@ -54,7 +55,8 @@ def load_and_adjust_data():
 
     # whole-cell volumes
     cv = averages.cell_volumes.values
-    cv[-1] = cv[0]  # the whole-cell volume is equal at beginning and start
+    cv[-1] = cv[0]  # we assume that the whole-cell volume returns to start value
+    # TODO this isn't the case, the volume lost at division is only ~15%, not ~30%
     cell_vols = np.append(cv, [cv[0], cv[0]])
 
     # generate interp1d functions so the area and vols can be retrieved for any t
@@ -82,9 +84,10 @@ def find_nearest(array, value):
     return array[idx]
 
 
-#################
-### The model ###
-#################
+                                                #################
+                                                ### The Model ###
+                                                #################
+
 def dp_dt(y, t, k_d, k_s, k_in, k_out):
     """
     Model that attempts to describe the change in cellular and nuclear abundances of a protein using ODEs. It is a
@@ -117,9 +120,10 @@ def dp_dt(y, t, k_d, k_s, k_in, k_out):
     return [dC_dt, dN_dt]
 
 
-###########################
-### Running simulations ###
-###########################
+                                            ###########################
+                                            ### Running simulations ###
+                                            ###########################
+
 def simulate(cp0, np0):
     """
     Function that simulates the protein abundance dynamics over the duration of a cell cycle based on the initial
@@ -128,12 +132,21 @@ def simulate(cp0, np0):
     :param np0: initial nuclear protein abundance
     :return:
     """
+    nuc_ab_loss_frac = (np.amax(nuc_vols) - nuc_vols[-1]) / np.amax(nuc_vols)
+    whole_vol_loss_frac = 1 - cell_vols[-1] / cell_vols[-4]  # fraction of volume that is lost to the daughter bud
+    print(f"Percentage of nuclear protein abundance lost at nuclear division: {round(nuc_ab_loss_frac * 100, 2)}%")
+    print(f"Percentage of whole-cell volume lost at division (end of cycle): {round(whole_vol_loss_frac * 100, 2)}%")
+
+    # arrays to store the results of multiple cycles in
     mult_cycles_cyt, mult_cycles_nuc = [], []
+
+    # generate split t_span to be able to simulate nuclear division event at 'nuc_div_tp'
+    tspan_whole = np.linspace(0, 99, num_datapoints)
+    closest = find_nearest(tspan_whole, nuc_div_tp)
+    tspan_before, tspan_after = np.split(tspan_whole, np.where(tspan_whole == closest)[0] + 1)
+
+    # simulate certain amount of cycles
     for i in range(num_cycles):
-        # generate split t_span to be able to simulate nuclear division event at 'nuc_div_tp'
-        tspan_whole = np.linspace(0, 99, num_datapoints)
-        closest = find_nearest(tspan_whole, nuc_div_tp)
-        tspan_before, tspan_after = np.split(tspan_whole, np.where(tspan_whole == closest)[0] + 1)
 
         # solve the ode up until the nuclear division event
         sols_before = odeint(dp_dt, [cp0, np0], tspan_before, args=(kd, kc, kIn, kOut))
@@ -141,10 +154,9 @@ def simulate(cp0, np0):
         sols_bf_ev_nuc = sols_before[:, 1]
 
         # simulate nuclear division event (reduction of nuclear abundance proportional to loss in nuc vol)
-        perc_to_remove = (np.amax(nuc_vols) - nuc_vols[-1]) / np.amax(nuc_vols)
         sols_after_event = np.array([
             sols_bf_ev_cyt[-1],  # nothing happens to the cellular abundance at nuclear split
-            sols_bf_ev_nuc[-1] - (sols_bf_ev_nuc[-1] * perc_to_remove)  # remove the calc. percentage from the ab.
+            (1 - nuc_ab_loss_frac) * sols_bf_ev_nuc[-1]  # remove the calc. percentage from the ab.
         ])
 
         # use the altered initial conditions to simulate the dynamics after the nuclear division event
@@ -153,10 +165,8 @@ def simulate(cp0, np0):
         sols_after_nuc = sols_after[:, 1][~np.isnan(sols_after[:, 1])]
 
         # simulate the bud separation event by reducing the cytoplasmic abundance in proportion to the volume loss
-        # percentage (0.281..) determined using the volume analysis pipeline
-        vol_loss_frac = 1 - cell_vols[-1] / cell_vols[-4]  # fraction of volume that is lost to the daughter bud
-        sols_after_cyt[-1] = (1 - vol_loss_frac) * sols_after_cyt[-1]
-        print(f"Percentage of whole-cell volume lost at division (end of cycle): {round(vol_loss_frac * 100, 2)}%")
+        # percentage (~ 28%) determined using the volume analysis pipeline
+        sols_after_cyt[-1] = (1 - whole_vol_loss_frac) * sols_after_cyt[-1]
 
         final_tspan = np.concatenate((tspan_before, tspan_after))  # merge the two split t-spans
         # according to the volume analysis script, the average duration of one cycle is 71.35 minutes.
@@ -177,8 +187,8 @@ def main():
     load_and_adjust_data()
     define_interpolated_functions()
 
-    cp0 = 200  # initial cytoplasmic protein abundance
-    np0 = 10  # initial nuclear protein abundance
+    cp0 = 600  # initial cytoplasmic protein abundance
+    np0 = 50  # initial nuclear protein abundance
 
     # perform model simulations
     final_tspan, mult_cycles_cyt, mult_cycles_nuc = simulate(cp0, np0)
@@ -188,9 +198,10 @@ def main():
     one_cycle_nuc = np.array(mult_cycles_nuc[len(mult_cycles_cyt)-num_datapoints:])
 
     # plotting
-    plotting.plot_abundances(final_tspan, one_cycle_cyt, one_cycle_nuc)
-    plotting.plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func, nv_func)
-    plotting.plot_multiple_cycles(final_tspan, mult_cycles_cyt, mult_cycles_nuc, num_cycles)
+    params = {"kd": round(kd, 5), "kIn": round(kIn, 4), "kOut": round(kOut, 4)}
+    plotting.plot_abundances(final_tspan, one_cycle_cyt, one_cycle_nuc, params)
+    plotting.plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func, nv_func, params)
+    plotting.plot_multiple_cycles(final_tspan, mult_cycles_cyt, mult_cycles_nuc, num_cycles, params)
 
 
 if __name__ == '__main__':
