@@ -1,4 +1,7 @@
 import sys
+
+import scipy.interpolate
+
 import plotting
 import numpy as np
 import pandas as pd
@@ -23,7 +26,7 @@ num_datapoints = 200  # the desired number of datapoints that is solved for with
 ### Global variables ###
 ########################
 cell_vols, nuc_vols, nuc_surface_areas = [], [], []
-a_func, cv_func, nv_func = None, None, None
+a_func, cv_func, nv_func = interp1d.__class__, interp1d.__class__, interp1d.__class__
 
                                             ########################
                                             ### Data preparation ###
@@ -187,8 +190,8 @@ def main():
     load_and_adjust_data()
     define_interpolated_functions()
 
-    cp0 = 600  # initial cytoplasmic protein abundance
-    np0 = 50  # initial nuclear protein abundance
+    cp0 = 200  # initial cytoplasmic protein abundance
+    np0 = 10  # initial nuclear protein abundance
 
     # perform model simulations
     final_tspan, mult_cycles_cyt, mult_cycles_nuc = simulate(cp0, np0)
