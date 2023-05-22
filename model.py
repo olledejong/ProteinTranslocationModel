@@ -1,7 +1,4 @@
 import sys
-
-import scipy.interpolate
-
 import plotting
 import numpy as np
 import pandas as pd
@@ -9,9 +6,10 @@ from math import log
 from scipy.integrate import odeint
 from scipy.interpolate import interp1d
 
-########################
-### Model parameters ###
-########################
+                                            ########################
+                                            ### Model parameters ###
+                                            ########################
+
 kc = 0.25  # synthesis rate of protein in cytoplasm
 kd = log(2) / 35  # degradation rate for protein
 kIn = log(2) / 10  # rate of translocation into nucleus
@@ -22,9 +20,10 @@ nuc_div_tp = 91  # simulated point at which nuclear division takes place
 num_cycles = 6  # number of cycles to include in the multiple-cycles plot
 num_datapoints = 200  # the desired number of datapoints that is solved for within the time-axis
 
-########################
-### Global variables ###
-########################
+                                            ########################
+                                            ### Global variables ###
+                                            ########################
+
 cell_vols, nuc_vols, nuc_surface_areas = [], [], []
 a_func, cv_func, nv_func = interp1d.__class__, interp1d.__class__, interp1d.__class__
 
@@ -59,7 +58,7 @@ def load_and_adjust_data():
     # whole-cell volumes
     cv = averages.cell_volumes.values
     cv[-1] = cv[0]  # we assume that the whole-cell volume returns to start value
-    # TODO this isn't the case, the volume lost at division is only ~15%, not ~30%
+    # TODO this isn't the case, the volume lost does not entirely reset the volume
     cell_vols = np.append(cv, [cv[0], cv[0]])
 
     # generate interp1d functions so the area and vols can be retrieved for any t
@@ -82,10 +81,12 @@ def define_interpolated_functions():
 
 
 def find_nearest(array, value):
+    """
+    Finds the value in the array that is closest to 'value'
+    """
     array = np.asarray(array)
     idx = (np.abs(array - value)).argmin()
     return array[idx]
-
 
                                                 #################
                                                 ### The Model ###
@@ -116,12 +117,10 @@ def dp_dt(y, t, k_d, k_s, k_in, k_out):
     k_in = k_in / np.average(nuc_surface_areas)  # import rate scaling using the average nuclear surface area
     k_out = k_out / np.average(nuc_surface_areas)  # export rate scaling using the average nuclear surface area
 
-
     dC_dt = k_s * 20 + A * (-k_in * C / (Vc - Vn) + k_out * N / Vn) - k_d * C
     dN_dt = A * (k_in * C / (Vc - Vn) - k_out * N / Vn) - k_d * N
 
     return [dC_dt, dN_dt]
-
 
                                             ###########################
                                             ### Running simulations ###
@@ -152,38 +151,32 @@ def simulate(cp0, np0):
     for i in range(num_cycles):
 
         # solve the ode up until the nuclear division event
-        sols_before = odeint(dp_dt, [cp0, np0], tspan_before, args=(kd, kc, kIn, kOut))
-        sols_bf_ev_cyt = sols_before[:, 0]
-        sols_bf_ev_nuc = sols_before[:, 1]
+        sols_be = odeint(dp_dt, [cp0, np0], tspan_before, args=(kd, kc, kIn, kOut))
 
         # simulate nuclear division event (reduction of nuclear abundance proportional to loss in nuc vol)
-        sols_after_event = np.array([
-            sols_bf_ev_cyt[-1],  # nothing happens to the cellular abundance at nuclear split
-            (1 - nuc_ab_loss_frac) * sols_bf_ev_nuc[-1]  # remove the calc. percentage from the ab.
+        ab_after_event = np.array([
+            sols_be[:, 0][-1],  # nothing happens to the cellular abundance at nuclear split
+            (1 - nuc_ab_loss_frac) * sols_be[:, 1][-1]  # remove the calc. percentage from the ab.
         ])
 
-        # use the altered initial conditions to simulate the dynamics after the nuclear division event
-        sols_after = odeint(dp_dt, sols_after_event, tspan_after, args=(kd, kc, kIn, kOut))
-        sols_after_cyt = sols_after[:, 0][~np.isnan(sols_after[:, 0])]
-        sols_after_nuc = sols_after[:, 1][~np.isnan(sols_after[:, 1])]
+        # simulate the dynamics after the nuclear division event
+        sols_ae = odeint(dp_dt, ab_after_event, tspan_after, args=(kd, kc, kIn, kOut))
 
         # simulate the bud separation event by reducing the cytoplasmic abundance in proportion to the volume loss
         # percentage (~ 28%) determined using the volume analysis pipeline
-        sols_after_cyt[-1] = (1 - whole_vol_loss_frac) * sols_after_cyt[-1]
+        sols_ae[:, 0][-1] = (1 - whole_vol_loss_frac) * sols_ae[:, 0][-1]
 
-        final_tspan = np.concatenate((tspan_before, tspan_after))  # merge the two split t-spans
-        # according to the volume analysis script, the average duration of one cycle is 71.35 minutes.
-        # let's modify the time-axis using this knowledge (for purpose of plotting on a real time axis)
+        final_cyt_ab = np.concatenate((sols_be[:, 0], sols_ae[:, 0]))
+        final_nuc_ab = np.concatenate((sols_be[:, 1], sols_ae[:, 1]))
 
-        final_cyt_ab = np.concatenate((sols_before[:, 0], sols_after_cyt))
-        final_nuc_ab = np.concatenate((sols_before[:, 1], sols_after_nuc))
+        # add this cycle's data to the rest of the data
         mult_cycles_cyt.extend(final_cyt_ab)
         mult_cycles_nuc.extend(final_nuc_ab)
 
         # final values of this simulation become the next simulation's initial conditions
         cp0, np0 = final_cyt_ab[-1], final_nuc_ab[-1]
 
-    return final_tspan, mult_cycles_cyt, mult_cycles_nuc
+    return tspan_whole, mult_cycles_cyt, mult_cycles_nuc
 
 
 def main():

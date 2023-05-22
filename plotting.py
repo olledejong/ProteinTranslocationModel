@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 plt.style.use('seaborn-v0_8-dark')
 
+# according to the volume analysis script, the average duration of one cycle is 71.35 minutes.
 time_scalar = 0.7135  # scalar based on average duration of cycle to scale back to real minute axis
 
 def plot_abundances(tspan, y1, y2, params):
