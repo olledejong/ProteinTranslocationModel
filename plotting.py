@@ -1,9 +1,32 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import os
+from model import area_vol_data_file
+
 plt.style.use('seaborn-v0_8-dark')
 
 # according to the volume analysis script, the average duration of one cycle is 71.35 minutes.
 time_scalar = 0.7135  # scalar based on average duration of cycle to scale back to real minute axis
+
+
+def save_figure(path, bbox_inches='tight', dpi=300):
+    """
+    Custom function that lets you save a pyplot figure and creates the directory where necessary
+    """
+    directory = os.path.split(path)[0]
+    filename = os.path.split(path)[1]
+    if directory == '':
+        directory = '.'
+
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    save_path = os.path.join(directory, filename)
+
+    # Actually save the figure
+    plt.savefig(save_path, bbox_inches=bbox_inches, dpi=dpi)
+    plt.close()
+
 
 def plot_abundances(tspan, y1, y2, params):
     fig, ax1 = plt.subplots()
@@ -18,7 +41,7 @@ def plot_abundances(tspan, y1, y2, params):
     ax2.set_ylabel("Nuclear protein abundance", color='darkred')
     ax2.plot(tspan * time_scalar, y2, color='darkred')
     ax2.tick_params(axis='y', labelcolor='darkred')
-    plt.show()
+    save_figure(f"./output/{area_vol_data_file}/abundances.png")
 
 
 def plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func, nv_func, params):
@@ -44,19 +67,19 @@ def plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func,
     plt.title(f"Cytoplasmic protein concentration\nParams: {params}")
     plt.xlabel("Time (minutes)")
     plt.ylabel("Concentration")
-    plt.show()
+    save_figure(f"./output/{area_vol_data_file}/cyt_concentration.png")
 
     plt.plot(final_tspan * time_scalar, n_con, c='darkred', lw=2)
     plt.title(f"Nuclear protein concentration\nParams: {params}")
     plt.xlabel("Time (minutes)")
     plt.ylabel("Concentration")
-    plt.show()
+    save_figure(f"./output/{area_vol_data_file}/nuc_concentration.png")
 
     plt.plot(final_tspan * time_scalar, con_ratio, c='darkred', lw=2)
     plt.title(f"Nuclear to cytoplasmic protein concentration ratio\nParams: {params}")
     plt.xlabel("Time (minutes)")
     plt.ylabel("Ratio")
-    plt.show()
+    save_figure(f"./output/{area_vol_data_file}/nc_concentration_ratio.png")
 
 
 def plot_multiple_cycles(final_tspan, cyt_ab_cycles, nuc_ab_cycles, num_cycles, params):
@@ -73,4 +96,4 @@ def plot_multiple_cycles(final_tspan, cyt_ab_cycles, nuc_ab_cycles, num_cycles, 
     ax2.set_ylabel("Nuclear protein abundance", color='darkred')
     ax2.plot(t_axis * time_scalar, nuc_ab_cycles, color='darkred')
     ax2.tick_params(axis='y', labelcolor='darkred')
-    plt.show()
+    save_figure(f"./output/{area_vol_data_file}/multiple_cycles.png")

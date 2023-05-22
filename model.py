@@ -6,7 +6,9 @@ from math import log
 from scipy.integrate import odeint
 from scipy.interpolate import interp1d
 
-                                            ########################
+area_vol_data_file = "./pos20_2_cycle1.xlsx"
+
+########################
                                             ### Model parameters ###
                                             ########################
 
@@ -40,7 +42,7 @@ def load_and_adjust_data():
     :return:
     """
     global cell_vols, nuc_vols, nuc_surface_areas
-    averages = pd.read_excel("./averages.xlsx")
+    averages = pd.read_excel(area_vol_data_file)
 
     # nuclear volume over time (altered to simulate instant nuclear division)
     nv = averages.nuc_volumes.values
