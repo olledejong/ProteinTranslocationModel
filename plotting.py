@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-from model import area_vol_data_file
+from model import averages_file
 
 plt.style.use('seaborn-v0_8-dark')
 
@@ -28,6 +28,26 @@ def save_figure(path, bbox_inches='tight', dpi=300):
     plt.close()
 
 
+def plot_volumes(tspan, cv_func, nv_func):
+    cell_vols = [cv_func(t).flatten()[0] for t in tspan]
+    nuc_vols = [nv_func(t).flatten()[0] for t in tspan]
+    cyt_vols = [i - j for i, j in zip(cell_vols, nuc_vols)]
+
+    fig, ax1 = plt.subplots()
+    fig.suptitle(f"Cytoplasmic and nuclear volumes over time")
+    ax1.set_xlabel('Time (minutes)')
+    ax1.grid(False)
+    ax1.set_ylabel("Cytoplasmic volume", color='orange')
+    ax1.plot(tspan * time_scalar, cyt_vols, color='orange')
+    ax1.tick_params(axis='y', labelcolor='orange')
+    ax2 = ax1.twinx()
+    ax2.grid(False)
+    ax2.set_ylabel("Nuclear volume", color='darkblue')
+    ax2.plot(tspan * time_scalar, nuc_vols, color='darkblue')
+    ax2.tick_params(axis='y', labelcolor='darkblue')
+    save_figure(f"./output/{averages_file}/combined_volumes.png")
+
+
 def plot_abundances(tspan, y1, y2, params):
     fig, ax1 = plt.subplots()
     fig.suptitle(f"Cytoplasmic and nuclear protein abundances over time\nParams: {params}")
@@ -41,7 +61,7 @@ def plot_abundances(tspan, y1, y2, params):
     ax2.set_ylabel("Nuclear protein abundance", color='darkred')
     ax2.plot(tspan * time_scalar, y2, color='darkred')
     ax2.tick_params(axis='y', labelcolor='darkred')
-    save_figure(f"./output/{area_vol_data_file}/abundances.png")
+    save_figure(f"./output/{averages_file}/abundances.png")
 
 
 def plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func, nv_func, params):
@@ -67,19 +87,19 @@ def plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func,
     plt.title(f"Cytoplasmic protein concentration\nParams: {params}")
     plt.xlabel("Time (minutes)")
     plt.ylabel("Concentration")
-    save_figure(f"./output/{area_vol_data_file}/cyt_concentration.png")
+    save_figure(f"./output/{averages_file}/cyt_concentration.png")
 
     plt.plot(final_tspan * time_scalar, n_con, c='darkred', lw=2)
     plt.title(f"Nuclear protein concentration\nParams: {params}")
     plt.xlabel("Time (minutes)")
     plt.ylabel("Concentration")
-    save_figure(f"./output/{area_vol_data_file}/nuc_concentration.png")
+    save_figure(f"./output/{averages_file}/nuc_concentration.png")
 
     plt.plot(final_tspan * time_scalar, con_ratio, c='darkred', lw=2)
     plt.title(f"Nuclear to cytoplasmic protein concentration ratio\nParams: {params}")
     plt.xlabel("Time (minutes)")
     plt.ylabel("Ratio")
-    save_figure(f"./output/{area_vol_data_file}/nc_concentration_ratio.png")
+    save_figure(f"./output/{averages_file}/nc_concentration_ratio.png")
 
 
 def plot_multiple_cycles(final_tspan, cyt_ab_cycles, nuc_ab_cycles, num_cycles, params):
@@ -96,4 +116,4 @@ def plot_multiple_cycles(final_tspan, cyt_ab_cycles, nuc_ab_cycles, num_cycles, 
     ax2.set_ylabel("Nuclear protein abundance", color='darkred')
     ax2.plot(t_axis * time_scalar, nuc_ab_cycles, color='darkred')
     ax2.tick_params(axis='y', labelcolor='darkred')
-    save_figure(f"./output/{area_vol_data_file}/multiple_cycles.png")
+    save_figure(f"./output/{averages_file}/multiple_cycles.png")
