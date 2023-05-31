@@ -2,11 +2,11 @@ import sys
 import plotting
 import numpy as np
 import pandas as pd
-from math import log
+from math import log, pow
 from scipy.integrate import odeint
 from scipy.interpolate import interp1d
 
-area_vol_data_file = "./pos20_2_cycle1.xlsx"
+averages_file = "./averages.xlsx"
 
 ########################
                                             ### Model parameters ###
@@ -16,7 +16,6 @@ kc = 0.25  # synthesis rate of protein in cytoplasm
 kd = log(2) / 35  # degradation rate for protein
 kIn = log(2) / 10  # rate of translocation into nucleus
 kOut = log(2) / 10  # rate of translocation out of nucleus
-peak_of_nuc_vol = 81  # position of the latest local high of the nuclear volume
 nuc_div_tp = 91  # simulated point at which nuclear division takes place
 
 num_cycles = 6  # number of cycles to include in the multiple-cycles plot
@@ -42,10 +41,11 @@ def load_and_adjust_data():
     :return:
     """
     global cell_vols, nuc_vols, nuc_surface_areas
-    averages = pd.read_excel(area_vol_data_file)
+    averages = pd.read_excel(averages_file)
 
     # nuclear volume over time (altered to simulate instant nuclear division)
     nv = averages.nuc_volumes.values
+    peak_of_nuc_vol = np.argmax(nv)  # position of the volume peak of the nucleus
     nv[peak_of_nuc_vol:nuc_div_tp] = nv[peak_of_nuc_vol]  # up until nuc div, the nuc vol stays constant at its high
     nv[nuc_div_tp:] = [nv[0]] * len(nv[nuc_div_tp:])  # after nuclear separation, the volume returns to the starting val
     nuc_vols = np.append(nv, [nv[0], nv[0]])
@@ -60,7 +60,6 @@ def load_and_adjust_data():
     # whole-cell volumes
     cv = averages.cell_volumes.values
     cv[-1] = cv[0]  # we assume that the whole-cell volume returns to start value
-    # TODO this isn't the case, the volume lost does not entirely reset the volume
     cell_vols = np.append(cv, [cv[0], cv[0]])
 
     # generate interp1d functions so the area and vols can be retrieved for any t
@@ -81,7 +80,6 @@ def define_interpolated_functions():
     nv_func = interp1d(t_range, nuc_vols, kind='linear', bounds_error=False)
 
 
-
 def find_nearest(array, value):
     """
     Finds the value in the array that is closest to 'value'
@@ -93,6 +91,22 @@ def find_nearest(array, value):
                                                 #################
                                                 ### The Model ###
                                                 #################
+
+
+def get_k_out(t, k_out):
+    """
+    Function that linearly increases the nuclear export rate from time point 85 in order
+    to simulate transiently increasing leakiness of the nucleus when approaching karyokinesis.
+    :param t:
+    :param k_out:
+    :return:
+    """
+    k_out_adj = k_out / np.average(nuc_surface_areas)
+    if t <= 85:
+        return k_out_adj
+    else:
+        return 0.1 * pow(1.1, t - 100) + k_out_adj
+
 
 def dp_dt(y, t, k_d, k_s, k_in, k_out):
     """
@@ -117,7 +131,6 @@ def dp_dt(y, t, k_d, k_s, k_in, k_out):
     Vc = cv_func(t)  # whole cell volume at t
     Vn = nv_func(t)  # nuclear volume at t
     k_in = k_in / np.average(nuc_surface_areas)  # import rate scaling using the average nuclear surface area
-    k_out = k_out / np.average(nuc_surface_areas)  # export rate scaling using the average nuclear surface area
 
     dC_dt = k_s * 20 + A * (-k_in * C / (Vc - Vn) + k_out * N / Vn) - k_d * C
     dN_dt = A * (k_in * C / (Vc - Vn) - k_out * N / Vn) - k_d * N
@@ -197,6 +210,7 @@ def main():
 
     # plotting
     params = {"kd": round(kd, 5), "kIn": round(kIn, 4), "kOut": round(kOut, 4)}
+    plotting.plot_volumes(final_tspan, cv_func, nv_func)
     plotting.plot_abundances(final_tspan, one_cycle_cyt, one_cycle_nuc, params)
     plotting.plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func, nv_func, params)
     plotting.plot_multiple_cycles(final_tspan, mult_cycles_cyt, mult_cycles_nuc, num_cycles, params)
