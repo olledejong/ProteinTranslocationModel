@@ -92,6 +92,20 @@ def find_nearest(array, value):
                                                 ### The Model ###
                                                 #################
 
+def get_k_in(t, k_in):
+    """
+    Function that increases the nuclear import rate in the first third of the cell cycle. This
+    is done by usage of a gaussian distribution.
+    :param t:
+    :param k_in:
+    :return:
+    """
+    k_in_adj = k_in / np.average(nuc_surface_areas)
+
+    # return 1 / sqrt(2 * pi * 70) * exp(-(t - 14)**2 / 2 * 0.03) + k_in_adj
+    return 1 / sqrt(2 * pi * 16) * exp(-(t - 14)**2 / 2 * 0.03) + k_in_adj
+
+
 
 def get_k_out(t, k_out):
     """
@@ -102,10 +116,8 @@ def get_k_out(t, k_out):
     :return:
     """
     k_out_adj = k_out / np.average(nuc_surface_areas)
-    if t <= 85:
-        return k_out_adj
-    else:
-        return 0.1 * pow(1.1, t - 100) + k_out_adj
+
+    return 0.1 * pow(1.1, t - 100) + k_out_adj
 
 
 def dp_dt(y, t, k_d, k_s, k_in, k_out):
@@ -130,7 +142,14 @@ def dp_dt(y, t, k_d, k_s, k_in, k_out):
     A = a_func(t)  # nuclear surface area at t
     Vc = cv_func(t)  # whole cell volume at t
     Vn = nv_func(t)  # nuclear volume at t
-    k_in = k_in / np.average(nuc_surface_areas)  # import rate scaling using the average nuclear surface area
+    k_out = get_k_out(t, k_out)
+    k_in = get_k_in(t, k_in)  # import rate scaling using the average nuclear surface area
+    # k_in = k_in / np.average(nuc_surface_areas)
+    # k_out = k_out / np.average(nuc_surface_areas)
+
+    ts.append(t)
+    kins.append(k_in)
+    kouts.append(k_out)
 
     dC_dt = k_s * 20 + A * (-k_in * C / (Vc - Vn) + k_out * N / Vn) - k_d * C
     dN_dt = A * (k_in * C / (Vc - Vn) - k_out * N / Vn) - k_d * N
