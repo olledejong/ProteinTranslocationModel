@@ -2,13 +2,18 @@ import sys
 import plotting
 import numpy as np
 import pandas as pd
-from math import log, pow
+import matplotlib.pyplot as plt
+from math import log, pow, sqrt, pi, exp
 from scipy.integrate import odeint
 from scipy.interpolate import interp1d
 
+ts = []
+kouts = []
+kins = []
+
 averages_file = "./averages.xlsx"
 
-########################
+                                            ########################
                                             ### Model parameters ###
                                             ########################
 
@@ -42,6 +47,10 @@ def load_and_adjust_data():
     """
     global cell_vols, nuc_vols, nuc_surface_areas
     averages = pd.read_excel(averages_file)
+
+    # plot the raw average values for completeness
+    t_range = np.arange(len(averages.cell_volumes.values))
+    plotting.plot_volumes(t_range, averages.cell_volumes.values, averages.nuc_volumes.values)
 
     # nuclear volume over time (altered to simulate instant nuclear division)
     nv = averages.nuc_volumes.values
@@ -103,7 +112,7 @@ def get_k_in(t, k_in):
     k_in_adj = k_in / np.average(nuc_surface_areas)
 
     # return 1 / sqrt(2 * pi * 70) * exp(-(t - 14)**2 / 2 * 0.03) + k_in_adj
-    return 1 / sqrt(2 * pi * 16) * exp(-(t - 14)**2 / 2 * 0.03) + k_in_adj
+    return 1 / sqrt(2 * pi * 800) * exp(-(t - 14)**2 / 2 * 0.03) + k_in_adj
 
 
 
@@ -117,7 +126,7 @@ def get_k_out(t, k_out):
     """
     k_out_adj = k_out / np.average(nuc_surface_areas)
 
-    return 0.1 * pow(1.1, t - 100) + k_out_adj
+    return 0.1 * pow(1.1, t - 120) + k_out_adj
 
 
 def dp_dt(y, t, k_d, k_s, k_in, k_out):
@@ -229,10 +238,13 @@ def main():
 
     # plotting
     params = {"kd": round(kd, 5), "kIn": round(kIn, 4), "kOut": round(kOut, 4)}
-    plotting.plot_volumes(final_tspan, cv_func, nv_func)
     plotting.plot_abundances(final_tspan, one_cycle_cyt, one_cycle_nuc, params)
     plotting.plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func, nv_func, params)
     plotting.plot_multiple_cycles(final_tspan, mult_cycles_cyt, mult_cycles_nuc, num_cycles, params)
+
+    plt.scatter(ts, kouts, s=2)
+    plt.scatter(ts, kins, s=2)
+    plt.show()
 
 
 if __name__ == '__main__':

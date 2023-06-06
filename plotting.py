@@ -6,7 +6,7 @@ from model import averages_file
 plt.style.use('seaborn-v0_8-dark')
 
 # according to the volume analysis script, the average duration of one cycle is 71.35 minutes.
-time_scalar = 0.7135  # scalar based on average duration of cycle to scale back to real minute axis
+# time_scalar = 0.7135  # scalar based on average duration of cycle to scale back to real minute axis
 
 
 def save_figure(path, bbox_inches='tight', dpi=300):
@@ -28,22 +28,20 @@ def save_figure(path, bbox_inches='tight', dpi=300):
     plt.close()
 
 
-def plot_volumes(tspan, cv_func, nv_func):
-    cell_vols = [cv_func(t).flatten()[0] for t in tspan]
-    nuc_vols = [nv_func(t).flatten()[0] for t in tspan]
+def plot_volumes(tspan, cell_vols, nuc_vols):
     cyt_vols = [i - j for i, j in zip(cell_vols, nuc_vols)]
 
     fig, ax1 = plt.subplots()
     fig.suptitle(f"Cytoplasmic and nuclear volumes over time")
-    ax1.set_xlabel('Time (minutes)')
+    ax1.set_xlabel('Cell cycle progression')
     ax1.grid(False)
     ax1.set_ylabel("Cytoplasmic volume", color='orange')
-    ax1.plot(tspan * time_scalar, cyt_vols, color='orange')
+    ax1.plot(tspan / 100, cyt_vols, color='orange')
     ax1.tick_params(axis='y', labelcolor='orange')
     ax2 = ax1.twinx()
     ax2.grid(False)
     ax2.set_ylabel("Nuclear volume", color='darkblue')
-    ax2.plot(tspan * time_scalar, nuc_vols, color='darkblue')
+    ax2.plot(tspan / 100, nuc_vols, color='darkblue')
     ax2.tick_params(axis='y', labelcolor='darkblue')
     save_figure(f"./output/{averages_file}/combined_volumes.png")
 
@@ -51,15 +49,15 @@ def plot_volumes(tspan, cv_func, nv_func):
 def plot_abundances(tspan, y1, y2, params):
     fig, ax1 = plt.subplots()
     fig.suptitle(f"Cytoplasmic and nuclear protein abundances over time\nParams: {params}")
-    ax1.set_xlabel('Time (minutes)')
+    ax1.set_xlabel('Cell cycle progression')
     ax1.grid(False)
     ax1.set_ylabel("Cytoplasmic protein abundance", color='orange')
-    ax1.plot(tspan * time_scalar, y1, color='orange')
+    ax1.plot(tspan / 100, y1, color='orange')
     ax1.tick_params(axis='y', labelcolor='orange')
     ax2 = ax1.twinx()
     ax2.grid(False)
     ax2.set_ylabel("Nuclear protein abundance", color='darkred')
-    ax2.plot(tspan * time_scalar, y2, color='darkred')
+    ax2.plot(tspan / 100, y2, color='darkred')
     ax2.tick_params(axis='y', labelcolor='darkred')
     save_figure(f"./output/{averages_file}/abundances.png")
 
@@ -83,21 +81,21 @@ def plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func,
 
     con_ratio = [i / j for i, j in zip(n_con, c_con)]
 
-    plt.plot(final_tspan * time_scalar, c_con, c='darkred', lw=2)
+    plt.plot(final_tspan / 100, c_con, c='darkred', lw=2)
     plt.title(f"Cytoplasmic protein concentration\nParams: {params}")
-    plt.xlabel("Time (minutes)")
+    plt.xlabel("Cell cycle progression")
     plt.ylabel("Concentration")
     save_figure(f"./output/{averages_file}/cyt_concentration.png")
 
-    plt.plot(final_tspan * time_scalar, n_con, c='darkred', lw=2)
+    plt.plot(final_tspan / 100, n_con, c='darkred', lw=2)
     plt.title(f"Nuclear protein concentration\nParams: {params}")
-    plt.xlabel("Time (minutes)")
+    plt.xlabel("Cell cycle progression")
     plt.ylabel("Concentration")
     save_figure(f"./output/{averages_file}/nuc_concentration.png")
 
-    plt.plot(final_tspan * time_scalar, con_ratio, c='darkred', lw=2)
+    plt.plot(final_tspan / 100, con_ratio, c='darkred', lw=2)
     plt.title(f"Nuclear to cytoplasmic protein concentration ratio\nParams: {params}")
-    plt.xlabel("Time (minutes)")
+    plt.xlabel("Cell cycle progression")
     plt.ylabel("Ratio")
     save_figure(f"./output/{averages_file}/nc_concentration_ratio.png")
 
@@ -106,14 +104,14 @@ def plot_multiple_cycles(final_tspan, cyt_ab_cycles, nuc_ab_cycles, num_cycles, 
     t_axis = np.linspace(0, final_tspan[-1] * num_cycles, len(cyt_ab_cycles))
     fig, ax1 = plt.subplots()
     fig.suptitle(f"Cytoplasmic and nuclear protein abundances over time (multiple cycles)\nParams: {params}")
-    ax1.set_xlabel('Time (minutes)')
+    ax1.set_xlabel('Cell cycle progression')
     ax1.grid(False)
     ax1.set_ylabel("Cytoplasmic protein abundance", color='orange')
-    ax1.plot(t_axis * time_scalar, cyt_ab_cycles, color='orange')
+    ax1.plot(t_axis / 100, cyt_ab_cycles, color='orange')
     ax1.tick_params(axis='y', labelcolor='orange')
     ax2 = ax1.twinx()
     ax2.grid(False)
     ax2.set_ylabel("Nuclear protein abundance", color='darkred')
-    ax2.plot(t_axis * time_scalar, nuc_ab_cycles, color='darkred')
+    ax2.plot(t_axis / 100, nuc_ab_cycles, color='darkred')
     ax2.tick_params(axis='y', labelcolor='darkred')
     save_figure(f"./output/{averages_file}/multiple_cycles.png")
