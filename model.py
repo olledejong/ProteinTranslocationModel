@@ -19,7 +19,7 @@ averages_file = "./averages.xlsx"
 
 kc = 0.25  # synthesis rate of protein in cytoplasm
 kd = log(2) / 35  # degradation rate for protein
-kIn = log(2) / 10  # rate of translocation into nucleus
+kIn = log(2) / 5  # rate of translocation into nucleus
 kOut = log(2) / 10  # rate of translocation out of nucleus
 nuc_div_tp = 91  # simulated point at which nuclear division takes place
 
@@ -112,7 +112,7 @@ def get_k_in(t, k_in):
     k_in_adj = k_in / np.average(nuc_surface_areas)
 
     # return 1 / sqrt(2 * pi * 70) * exp(-(t - 14)**2 / 2 * 0.03) + k_in_adj
-    return 1 / sqrt(2 * pi * 800) * exp(-(t - 14)**2 / 2 * 0.03) + k_in_adj
+    return 1 / sqrt(2 * pi * 2 * pow(10, 3)) * exp(-(t - 14)**2 / 2 * 0.03) + k_in_adj
 
 
 
@@ -152,9 +152,9 @@ def dp_dt(y, t, k_d, k_s, k_in, k_out):
     Vc = cv_func(t)  # whole cell volume at t
     Vn = nv_func(t)  # nuclear volume at t
     k_out = get_k_out(t, k_out)
+    # k_out = k_out / np.average(nuc_surface_areas)
     k_in = get_k_in(t, k_in)  # import rate scaling using the average nuclear surface area
     # k_in = k_in / np.average(nuc_surface_areas)
-    # k_out = k_out / np.average(nuc_surface_areas)
 
     ts.append(t)
     kins.append(k_in)
