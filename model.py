@@ -237,14 +237,10 @@ def main():
     one_cycle_nuc = np.array(mult_cycles_nuc[len(mult_cycles_cyt)-num_datapoints:])
 
     # plotting
-    params = {"kd": round(kd, 5), "kIn": round(kIn, 4), "kOut": round(kOut, 4)}
-    plotting.plot_abundances(final_tspan, one_cycle_cyt, one_cycle_nuc, params)
-    plotting.plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func, nv_func, params)
-    plotting.plot_multiple_cycles(final_tspan, mult_cycles_cyt, mult_cycles_nuc, num_cycles, params)
-
-    plt.scatter(ts, kouts, s=2)
-    plt.scatter(ts, kins, s=2)
-    plt.show()
+    plotting.plot_rates(ts, kouts, kins)
+    plotting.plot_abundances(final_tspan, one_cycle_cyt, one_cycle_nuc)
+    plotting.plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func, nv_func)
+    plotting.plot_multiple_cycles(final_tspan, mult_cycles_cyt, mult_cycles_nuc, num_cycles)
 
 
 if __name__ == '__main__':
