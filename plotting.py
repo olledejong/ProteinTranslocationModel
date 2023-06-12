@@ -125,4 +125,4 @@ def plot_rates(ts, kouts, kins):
     plt.xlabel("Cell cycle progression")
     plt.ylabel("Rate")
     plt.legend(loc='best')
-    plt.show()
+    save_figure(f"./output/{averages_file}/rates.png")
