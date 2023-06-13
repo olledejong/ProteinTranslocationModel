@@ -2,7 +2,6 @@ import sys
 import plotting
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from math import log, pow, sqrt, pi, exp
 from scipy.integrate import odeint
 from scipy.interpolate import interp1d
@@ -17,9 +16,9 @@ averages_file = "./averages.xlsx"
                                             ### Model parameters ###
                                             ########################
 
-kc = 0.25  # synthesis rate of protein in cytoplasm
+kc = 0.25  # synthesis rate of protein in cytosol
 kd = log(2) / 35  # degradation rate for protein
-kIn = log(2) / 10  # rate of translocation into nucleus
+kIn = log(2) / 2  # rate of translocation into nucleus
 kOut = log(2) / 10  # rate of translocation out of nucleus
 nuc_div_tp = 91  # simulated point at which nuclear division takes place
 
@@ -118,7 +117,7 @@ def get_k_in(t, k_in):
 
 def get_k_out(t, k_out):
     """
-    Function that linearly increases the nuclear export rate from time point 85 in order
+    Function that exponentially increases the nuclear export rate from time point 85 in order
     to simulate transiently increasing leakiness of the nucleus when approaching karyokinesis.
     :param t:
     :param k_out:
@@ -139,7 +138,7 @@ def dp_dt(y, t, k_d, k_s, k_in, k_out):
        dC/dt: (1) synthesis of protein (2) net transfer into the cyt (prop to nuc surf area) (3) deg. of prot in cyt
        dN/dt: (1) net transfer into the nucleus (proportional to nuc surf. area) (2) degradation of prot in nucleus
 
-    :param y: array holding the previous predictions of the nuclear and cytoplasmic abundances
+    :param y: array holding the previous predictions of the nuclear and cytosolic abundances
     :param t: the new timestep for which predictions are made
     :param k_d: degradation rate of protein
     :param k_s: synthesis rate of protein
@@ -151,10 +150,10 @@ def dp_dt(y, t, k_d, k_s, k_in, k_out):
     A = a_func(t)  # nuclear surface area at t
     Vc = cv_func(t)  # whole cell volume at t
     Vn = nv_func(t)  # nuclear volume at t
-    # k_out = get_k_out(t, k_out)
-    k_out = k_out / np.average(nuc_surface_areas)
-    # k_in = get_k_in(t, k_in)  # import rate scaling using the average nuclear surface area
-    k_in = k_in / np.average(nuc_surface_areas)
+    k_out = get_k_out(t, k_out)
+    # k_out = k_out / np.average(nuc_surface_areas)
+    k_in = get_k_in(t, k_in)  # import rate scaling using the average nuclear surface area
+    # k_in = k_in / np.average(nuc_surface_areas)
 
     ts.append(t)
     kins.append(k_in)
@@ -173,7 +172,7 @@ def simulate(cp0, np0):
     """
     Function that simulates the protein abundance dynamics over the duration of a cell cycle based on the initial
     conditions and the desired amount of cycles.
-    :param cp0: initial cytoplasmic protein abundance
+    :param cp0: initial cytosolic protein abundance
     :param np0: initial nuclear protein abundance
     :return:
     """
@@ -205,7 +204,7 @@ def simulate(cp0, np0):
         # simulate the dynamics after the nuclear division event
         sols_ae = odeint(dp_dt, ab_after_event, tspan_after, args=(kd, kc, kIn, kOut))
 
-        # simulate the bud separation event by reducing the cytoplasmic abundance in proportion to the volume loss
+        # simulate the bud separation event by reducing the cytosolic abundance in proportion to the volume loss
         # percentage (~ 28%) determined using the volume analysis pipeline
         sols_ae[:, 0][-1] = (1 - whole_vol_loss_frac) * sols_ae[:, 0][-1]
 
@@ -226,7 +225,7 @@ def main():
     load_and_adjust_data()
     define_interpolated_functions()
 
-    cp0 = 200  # initial cytoplasmic protein abundance
+    cp0 = 200  # initial cytosolic protein abundance
     np0 = 10  # initial nuclear protein abundance
 
     # perform model simulations

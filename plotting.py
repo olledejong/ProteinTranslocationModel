@@ -32,10 +32,10 @@ def plot_volumes(tspan, cell_vols, nuc_vols):
     cyt_vols = [i - j for i, j in zip(cell_vols, nuc_vols)]
 
     fig, ax1 = plt.subplots()
-    fig.suptitle(f"Cytoplasmic and nuclear volumes over time")
+    fig.suptitle("Cytosolic and nuclear volumes over time")
     ax1.set_xlabel('Cell cycle progression')
     ax1.grid(False)
-    ax1.set_ylabel("Cytoplasmic volume", color='orange')
+    ax1.set_ylabel("Cytosolic volume", color='orange')
     ax1.plot(tspan / 100, cyt_vols, color='orange')
     ax1.tick_params(axis='y', labelcolor='orange')
     ax2 = ax1.twinx()
@@ -48,10 +48,10 @@ def plot_volumes(tspan, cell_vols, nuc_vols):
 
 def plot_abundances(tspan, y1, y2):
     fig, ax1 = plt.subplots()
-    fig.suptitle(f"Cytoplasmic and nuclear protein abundances over time")
+    fig.suptitle("Cytosolic and nuclear protein abundances over time")
     ax1.set_xlabel('Cell cycle progression')
     ax1.grid(False)
-    ax1.set_ylabel("Cytoplasmic protein abundance", color='orange')
+    ax1.set_ylabel("Cytosolic protein abundance", color='orange')
     ax1.plot(tspan / 100, y1, color='orange')
     ax1.tick_params(axis='y', labelcolor='orange')
     ax2 = ax1.twinx()
@@ -82,19 +82,19 @@ def plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func,
     con_ratio = [i / j for i, j in zip(n_con, c_con)]
 
     plt.plot(final_tspan / 100, c_con, c='darkred', lw=2)
-    plt.title(f"Cytoplasmic protein concentration")
+    plt.title("Cytosolic protein concentration")
     plt.xlabel("Cell cycle progression")
     plt.ylabel("Concentration")
     save_figure(f"./output/{averages_file}/cyt_concentration.png")
 
     plt.plot(final_tspan / 100, n_con, c='darkred', lw=2)
-    plt.title(f"Nuclear protein concentration")
+    plt.title("Nuclear protein concentration")
     plt.xlabel("Cell cycle progression")
     plt.ylabel("Concentration")
     save_figure(f"./output/{averages_file}/nuc_concentration.png")
 
     plt.plot(final_tspan / 100, con_ratio, c='darkred', lw=2)
-    plt.title(f"Nuclear to cytoplasmic protein concentration ratio")
+    plt.title("Nuclear to cytosolic protein concentration ratio")
     plt.xlabel("Cell cycle progression")
     plt.ylabel("Ratio")
     save_figure(f"./output/{averages_file}/nc_concentration_ratio.png")
@@ -103,10 +103,10 @@ def plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func,
 def plot_multiple_cycles(final_tspan, cyt_ab_cycles, nuc_ab_cycles, num_cycles):
     t_axis = np.linspace(0, final_tspan[-1] * num_cycles, len(cyt_ab_cycles))
     fig, ax1 = plt.subplots()
-    fig.suptitle(f"Cytoplasmic and nuclear protein abundances over time (multiple cycles)")
+    fig.suptitle(f"Cytosolic and nuclear protein abundances over time (multiple cycles)")
     ax1.set_xlabel('Cell cycle progression')
     ax1.grid(False)
-    ax1.set_ylabel("Cytoplasmic protein abundance", color='orange')
+    ax1.set_ylabel("Cytosolic protein abundance", color='orange')
     ax1.plot(t_axis / 100, cyt_ab_cycles, color='orange')
     ax1.tick_params(axis='y', labelcolor='orange')
     ax2 = ax1.twinx()
