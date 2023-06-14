@@ -125,7 +125,7 @@ def get_k_out(t, k_out):
     """
     k_out_adj = k_out / np.average(nuc_surface_areas)
 
-    return 0.1 * pow(1.1, t - 120) + k_out_adj
+    return 0.1 * pow(1.1, t - 135) + k_out_adj
 
 
 def dp_dt(y, t, k_d, k_s, k_in, k_out):
