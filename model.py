@@ -18,7 +18,7 @@ averages_file = "./averages.xlsx"
 
 kc = 0.25  # synthesis rate of protein in cytosol
 kd = log(2) / 35  # degradation rate for protein
-kIn = log(2) / 2  # rate of translocation into nucleus
+kIn = log(2) / 2.4  # rate of translocation into nucleus
 kOut = log(2) / 10  # rate of translocation out of nucleus
 nuc_div_tp = 91  # simulated point at which nuclear division takes place
 
@@ -110,9 +110,7 @@ def get_k_in(t, k_in):
     """
     k_in_adj = k_in / np.average(nuc_surface_areas)
 
-    # return 1 / sqrt(2 * pi * 70) * exp(-(t - 14)**2 / 2 * 0.03) + k_in_adj
-    return 1 / sqrt(2 * pi * 2 * pow(10, 3)) * exp(-(t - 14)**2 / 2 * 0.03) + k_in_adj
-
+    return 1 / 100 * exp(-(t - 12)**2 / 2 * 0.09) + k_in_adj
 
 
 def get_k_out(t, k_out):
@@ -124,8 +122,9 @@ def get_k_out(t, k_out):
     :return:
     """
     k_out_adj = k_out / np.average(nuc_surface_areas)
+    k_out_mp = 2
 
-    return 0.1 * pow(1.1, t - 135) + k_out_adj
+    return k_out_mp * exp(0.1 * (t - 145)) + k_out_adj
 
 
 def dp_dt(y, t, k_d, k_s, k_in, k_out):
