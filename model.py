@@ -2,7 +2,7 @@ import sys
 import plotting
 import numpy as np
 import pandas as pd
-from math import log, pow, sqrt, pi, exp
+from math import log, exp
 from scipy.integrate import odeint
 from scipy.interpolate import interp1d
 
@@ -150,9 +150,7 @@ def dp_dt(y, t, k_d, k_s, k_in, k_out):
     Vc = cv_func(t)  # whole cell volume at t
     Vn = nv_func(t)  # nuclear volume at t
     k_out = get_k_out(t, k_out)
-    # k_out = k_out / np.average(nuc_surface_areas)
     k_in = get_k_in(t, k_in)  # import rate scaling using the average nuclear surface area
-    # k_in = k_in / np.average(nuc_surface_areas)
 
     ts.append(t)
     kins.append(k_in)
