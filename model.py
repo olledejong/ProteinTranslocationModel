@@ -16,10 +16,12 @@ averages_file = "./averages.xlsx"
                                             ### Model parameters ###
                                             ########################
 
-kc = 0.25  # synthesis rate of protein in cytosol
+ks = 0.25  # synthesis rate of protein in cytosol
 kd = log(2) / 35  # degradation rate for protein
 kIn = log(2) / 2.4  # rate of translocation into nucleus
+kIn_mp = 1  # the higher this is, the higher the maximum of the nuclear import rate curve
 kOut = log(2) / 10  # rate of translocation out of nucleus
+kOut_mp = 1  # the higher this is, the higher the maximum of the nuclear export rate curve
 nuc_div_tp = 91  # simulated point at which nuclear division takes place
 
 num_cycles = 6  # number of cycles to include in the multiple-cycles plot
@@ -100,34 +102,31 @@ def find_nearest(array, value):
                                                 ### The Model ###
                                                 #################
 
-def get_k_in(t, k_in):
+def get_k_in(t, k_in, k_in_mp):
     """
     Function that increases the nuclear import rate in the first third of the cell cycle. This
     is done by usage of a gaussian distribution.
     :param t:
     :param k_in:
+    :param k_in_mp:
     :return:
     """
-    k_in_adj = k_in / np.average(nuc_surface_areas)
-
-    return 1 / 100 * exp(-(t - 12)**2 / 2 * 0.09) + k_in_adj
+    return k_in_mp / 80 * exp(-(t - 12)**2 / 2 * 0.09) + k_in
 
 
-def get_k_out(t, k_out):
+def get_k_out(t, k_out, k_out_mp):
     """
     Function that exponentially increases the nuclear export rate from time point 85 in order
     to simulate transiently increasing leakiness of the nucleus when approaching karyokinesis.
     :param t:
     :param k_out:
+    :param k_out_mp:
     :return:
     """
-    k_out_adj = k_out / np.average(nuc_surface_areas)
-    k_out_mp = 2
-
-    return k_out_mp * exp(0.1 * (t - 145)) + k_out_adj
+    return k_out_mp / 2 * exp(0.1 * (t - 145)) + k_out
 
 
-def dp_dt(y, t, k_d, k_s, k_in, k_out):
+def dp_dt(y, t, k_d, k_s, k_in, k_in_mp, k_out, k_out_mp):
     """
     Model that attempts to describe the change in cellular and nuclear abundances of a protein using ODEs. It is a
     constitutive model, i.e. it provides a relationship between the behavior of a protein and the forces acting on it.
@@ -143,14 +142,16 @@ def dp_dt(y, t, k_d, k_s, k_in, k_out):
     :param k_s: synthesis rate of protein
     :param k_in: nuclear import rate of protein
     :param k_out: nuclear export rate of protein
+    :param k_in_mp: nuclear import rate multiplier
+    :param k_out_mp: nuclear export rate multiplier
     :return:
     """
     C, N = y  # cellular and nuclear abundance of protein
     A = a_func(t)  # nuclear surface area at t
     Vc = cv_func(t)  # whole cell volume at t
     Vn = nv_func(t)  # nuclear volume at t
-    k_out = get_k_out(t, k_out)
-    k_in = get_k_in(t, k_in)  # import rate scaling using the average nuclear surface area
+    k_out = get_k_out(t, k_out, k_out_mp)
+    k_in = get_k_in(t, k_in, k_in_mp)
 
     ts.append(t)
     kins.append(k_in)
@@ -190,7 +191,7 @@ def simulate(cp0, np0):
     for i in range(num_cycles):
 
         # solve the ode up until the nuclear division event
-        sols_be = odeint(dp_dt, [cp0, np0], tspan_before, args=(kd, kc, kIn, kOut))
+        sols_be = odeint(dp_dt, [cp0, np0], tspan_before, args=(kd, ks, kIn, kIn_mp, kOut, kOut_mp))
 
         # simulate nuclear division event (reduction of nuclear abundance proportional to loss in nuc vol)
         ab_after_event = np.array([
@@ -199,7 +200,7 @@ def simulate(cp0, np0):
         ])
 
         # simulate the dynamics after the nuclear division event
-        sols_ae = odeint(dp_dt, ab_after_event, tspan_after, args=(kd, kc, kIn, kOut))
+        sols_ae = odeint(dp_dt, ab_after_event, tspan_after, args=(kd, ks, kIn, kIn_mp, kOut, kOut_mp))
 
         # simulate the bud separation event by reducing the cytosolic abundance in proportion to the volume loss
         # percentage (~ 28%) determined using the volume analysis pipeline
