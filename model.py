@@ -19,10 +19,10 @@ averages_file = "./averages.xlsx"
 
 ks = 0.25  # synthesis rate of protein in cytosol
 kd = log(2) / 35  # degradation rate for protein
-kIn = log(2) / 2.4  # rate of translocation into nucleus
+kIn = 0.693147  # rate of translocation into nucleus
 kIn_mp = 1  # the higher this is, the higher the maximum of the nuclear import rate curve
-kOut = log(2) / 10  # rate of translocation out of nucleus
-kOut_mp = 1  # the higher this is, the higher the maximum of the nuclear export rate curve
+kOut = 0.105336  # rate of translocation out of nucleus
+kOut_mp = 2  # the higher this is, the higher the maximum of the nuclear export rate curve
 nuc_div_tp = 91  # simulated point at which nuclear division takes place
 
 num_cycles = 6  # number of cycles to include in the multiple-cycles plot
@@ -112,6 +112,7 @@ def get_k_in(t, k_in, k_in_mp):
     :param k_in_mp:
     :return:
     """
+    k_in = k_in / np.average(nuc_surface_areas)
     return k_in_mp / 80 * exp(-(t - 12)**2 / 2 * 0.09) + k_in
 
 
@@ -124,6 +125,7 @@ def get_k_out(t, k_out, k_out_mp):
     :param k_out_mp:
     :return:
     """
+    k_out = k_out / np.average(nuc_surface_areas)
     return k_out_mp / 2 * exp(0.1 * (t - 145)) + k_out
 
 
@@ -237,7 +239,7 @@ def main():
     # plotting
     plotting.plot_rates(ts, kouts, kins)
     plotting.plot_abundances(final_tspan, one_cycle_cyt, one_cycle_nuc)
-    plotting.plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func, nv_func)
+    plotting.plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func, nv_func, kIn, kOut, kIn_mp, kOut_mp)
     plotting.plot_multiple_cycles(final_tspan, mult_cycles_cyt, mult_cycles_nuc, num_cycles)
 
 
