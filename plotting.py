@@ -3,7 +3,7 @@ import numpy as np
 import os
 from model import averages_file
 
-# plt.style.use('seaborn-v0_8-dark')
+plt.style.use('seaborn-v0_8-dark')
 
 # according to the volume analysis script, the average duration of one cycle is 71.35 minutes.
 # time_scalar = 0.7135  # scalar based on average duration of cycle to scale back to real minute axis
@@ -62,11 +62,13 @@ def plot_abundances(tspan, y1, y2):
     save_figure(f"./output/{averages_file}/abundances.png")
 
 
-def plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func, nv_func):
+def plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func, nv_func, kIn, kOut):
     # get cell / nuc volumes for all timepoints
     cell_vols = [cv_func(t).flatten()[0] for t in final_tspan]
     nuc_vols = [nv_func(t).flatten()[0] for t in final_tspan]
     cyt_vols = [i - j for i, j in zip(cell_vols, nuc_vols)]
+
+    cell_cycle_prog = final_tspan / 100  # convert x axis to cell cycle progression
 
     # with the abundances, the event is distinctly happening over one time-step, this is not the case for the volumes.
     # this is because the volumes are first manipulated to represent nuclear division at one time-step, but after that
@@ -81,19 +83,25 @@ def plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func,
 
     con_ratio = [i / j for i, j in zip(n_con, c_con)]
 
-    plt.plot(final_tspan / 100, c_con, c='darkred', lw=2)
+    # fit polynomial through the data to make it look neater
+    polfit = np.polyfit(cell_cycle_prog, con_ratio, 10)
+    poly_y = np.polyval(polfit, cell_cycle_prog)
+
+    plt.plot(cell_cycle_prog, c_con, c='darkred', lw=2)
     plt.title("Cytosolic protein concentration")
     plt.xlabel("Cell cycle progression")
     plt.ylabel("Concentration")
     save_figure(f"./output/{averages_file}/cyt_concentration.png")
 
-    plt.plot(final_tspan / 100, n_con, c='darkred', lw=2)
+    plt.plot(cell_cycle_prog, n_con, c='darkred', lw=2)
     plt.title("Nuclear protein concentration")
     plt.xlabel("Cell cycle progression")
     plt.ylabel("Concentration")
     save_figure(f"./output/{averages_file}/nuc_concentration.png")
 
-    plt.plot(final_tspan / 100, con_ratio, c='darkred', lw=2)
+    fig, ax = plt.subplots()
+    ax.plot(cell_cycle_prog, con_ratio, marker='o', c='darkred', lw=2, markersize=4)
+    ax.plot(cell_cycle_prog, poly_y, c='orange', lw=2)
     plt.title("Nuclear to cytosolic protein concentration ratio")
     plt.xlabel("Cell cycle progression")
     plt.ylabel("Ratio")

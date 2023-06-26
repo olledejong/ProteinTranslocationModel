@@ -1,5 +1,6 @@
 import sys
 import plotting
+import traceback
 import numpy as np
 import pandas as pd
 from math import log, exp
@@ -241,8 +242,12 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
-    sys.exit(0)
+    try:
+        main()
+        sys.exit(0)
+    except Exception:
+        print("\nSomething went wrong while running the model:\n", traceback.format_exc())
+        sys.exit(1)
 
 # NOTES
 # From the volume analysis script: Average cycle duration: 14.270588235294118 frames, which is equal
