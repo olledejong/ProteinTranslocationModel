@@ -62,7 +62,7 @@ def plot_abundances(tspan, y1, y2):
     save_figure(f"./output/{averages_file}/abundances.png")
 
 
-def plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func, nv_func, kIn, kOut):
+def plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func, nv_func, kIn_base, kOut_base, kin_mp, kout_mp):
     # get cell / nuc volumes for all timepoints
     cell_vols = [cv_func(t).flatten()[0] for t in final_tspan]
     nuc_vols = [nv_func(t).flatten()[0] for t in final_tspan]
@@ -100,9 +100,10 @@ def plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func,
     save_figure(f"./output/{averages_file}/nuc_concentration.png")
 
     fig, ax = plt.subplots()
-    ax.plot(cell_cycle_prog, con_ratio, marker='o', c='darkred', lw=2, markersize=4)
-    ax.plot(cell_cycle_prog, poly_y, c='orange', lw=2)
-    plt.title("Nuclear to cytosolic protein concentration ratio")
+    ax.plot(cell_cycle_prog, con_ratio, c='grey', lw=2, alpha=0.7)
+    ax.plot(cell_cycle_prog, poly_y, c='darkred', lw=4, alpha=0.8)
+    plt.title(f"Nuclear to cytosolic protein concentration ratio\nParams: kIn base"
+              f": {round(kIn_base, 6)}, kOut base: {round(kOut_base, 6)}, kIn mp: {kin_mp}, kOut mp: {kout_mp}")
     plt.xlabel("Cell cycle progression")
     plt.ylabel("Ratio")
     save_figure(f"./output/{averages_file}/nc_concentration_ratio.png")
