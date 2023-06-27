@@ -12,21 +12,27 @@ kouts = []
 kins = []
 
 averages_file = "./averages.xlsx"
+ref_trace_file = "Sfp1_WT.xlsx"
+ref_trace_file_path = f"./reference_traces/{ref_trace_file}"
 
                                             ########################
                                             ### Model parameters ###
                                             ########################
 
+
+cp0 = 200  # initial cytosolic protein abundance
+np0 = 10  # initial nuclear protein abundance
+
 ks = 0.25  # synthesis rate of protein in cytosol
 kd = log(2) / 35  # degradation rate for protein
-kIn = 0.693147  # rate of translocation into nucleus
+kIn = 0.6931471805599453  # rate of translocation into nucleus
 kIn_mp = 1  # the higher this is, the higher the maximum of the nuclear import rate curve
-kOut = 0.105336  # rate of translocation out of nucleus
-kOut_mp = 2  # the higher this is, the higher the maximum of the nuclear export rate curve
+kOut = 0.027087843259645444  # rate of translocation out of nucleus
+kOut_mp = 3  # the higher this is, the higher the maximum of the nuclear export rate curve
 nuc_div_tp = 91  # simulated point at which nuclear division takes place
 
 num_cycles = 6  # number of cycles to include in the multiple-cycles plot
-num_datapoints = 200  # the desired number of datapoints that is solved for within the time-axis
+num_datapoints = 100  # the desired number of datapoints that is solved for within the time-axis
 
                                             ########################
                                             ### Global variables ###
@@ -187,8 +193,7 @@ def simulate(cp0, np0):
 
     # generate split t_span to be able to simulate nuclear division event at 'nuc_div_tp'
     tspan_whole = np.linspace(0, 99, num_datapoints)
-    closest = find_nearest(tspan_whole, nuc_div_tp)
-    tspan_before, tspan_after = np.split(tspan_whole, np.where(tspan_whole == closest)[0] + 1)
+    tspan_before, tspan_after = np.split(tspan_whole, np.where(tspan_whole == nuc_div_tp)[0])
 
     # simulate certain amount of cycles
     for i in range(num_cycles):
@@ -222,12 +227,32 @@ def simulate(cp0, np0):
     return tspan_whole, mult_cycles_cyt, mult_cycles_nuc
 
 
+def calc_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc):
+    """
+    Function that calculates the nuclear-to-cytosolic concentration ratio of the protein
+    :param final_tspan:
+    :param one_cycle_cyt:
+    :param one_cycle_nuc:
+    :return:
+    """
+    # get cell / nuc volumes for all timepoints
+    whole_cell_vols = np.array([cv_func(t).flatten()[0] for t in final_tspan])
+    nuclear_vols = np.array([nv_func(t).flatten()[0] for t in final_tspan])
+    cytosolic_vols = np.subtract(whole_cell_vols, nuclear_vols)
+
+    # calculate the concentrations
+    cyt_con = np.divide(one_cycle_cyt, cytosolic_vols)
+    nuc_con = np.divide(one_cycle_nuc, nuclear_vols)
+
+    return cyt_con, nuc_con, np.divide(nuc_con, cyt_con)
+
+
 def main():
     load_and_adjust_data()
     define_interpolated_functions()
 
-    cp0 = 200  # initial cytosolic protein abundance
-    np0 = 10  # initial nuclear protein abundance
+    ref_trace_pd = pd.read_excel(ref_trace_file_path)
+    ref_trace = np.insert(ref_trace_pd.values.flatten(), 0, ref_trace_pd.columns[0], )
 
     # perform model simulations
     final_tspan, mult_cycles_cyt, mult_cycles_nuc = simulate(cp0, np0)
@@ -236,10 +261,12 @@ def main():
     one_cycle_cyt = np.array(mult_cycles_cyt[len(mult_cycles_cyt)-num_datapoints:])
     one_cycle_nuc = np.array(mult_cycles_nuc[len(mult_cycles_cyt)-num_datapoints:])
 
+    cyt_con, nuc_con, con_ratio = calc_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc)
+
     # plotting
     plotting.plot_rates(ts, kouts, kins)
     plotting.plot_abundances(final_tspan, one_cycle_cyt, one_cycle_nuc)
-    plotting.plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func, nv_func, kIn, kOut, kIn_mp, kOut_mp)
+    plotting.plot_concentration_ratio(final_tspan, cyt_con, nuc_con, con_ratio, kIn, kOut, kIn_mp, kOut_mp, ref_trace)
     plotting.plot_multiple_cycles(final_tspan, mult_cycles_cyt, mult_cycles_nuc, num_cycles)
 
 

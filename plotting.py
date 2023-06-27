@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-from model import averages_file
+from model import averages_file, ref_trace_file
 
 plt.style.use('seaborn-v0_8-dark')
 
@@ -62,26 +62,25 @@ def plot_abundances(tspan, y1, y2):
     save_figure(f"./output/{averages_file}/abundances.png")
 
 
-def plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func, nv_func, kIn_base, kOut_base, kin_mp, kout_mp):
-    # get cell / nuc volumes for all timepoints
-    cell_vols = [cv_func(t).flatten()[0] for t in final_tspan]
-    nuc_vols = [nv_func(t).flatten()[0] for t in final_tspan]
-    cyt_vols = [i - j for i, j in zip(cell_vols, nuc_vols)]
-
+def plot_concentration_ratio(final_tspan, c_con, n_con, con_ratio, kIn_base, kOut_base, kin_mp, kout_mp, ref_trace):
     cell_cycle_prog = final_tspan / 100  # convert x axis to cell cycle progression
 
-    # with the abundances, the event is distinctly happening over one time-step, this is not the case for the volumes.
-    # this is because the volumes are first manipulated to represent nuclear division at one time-step, but after that
-    # they are interpolated using the interp1d method. This causes a more transient simulation of that division.
-    # therefore we need to slightly alter these to prevent plotting artifacts.
-    nuc_vols[181:184] = [nuc_vols[180]] * len(nuc_vols[181:184])  # TODO make this dynamic (non-hardcoded indexes)
-    cyt_vols[-2] = cyt_vols[-3]
+    # calculate curve similarity
+    exp_data = np.zeros((100, 2))
+    exp_data[:, 0] = cell_cycle_prog
+    exp_data[:, 1] = con_ratio
 
-    # calculate the concentrations
-    c_con = [i / j for i, j in zip(one_cycle_cyt.tolist(), cyt_vols)]
-    n_con = [i / j for i, j in zip(one_cycle_nuc.tolist(), nuc_vols)]
+    num_data = np.zeros((100, 2))
+    num_data[:, 0] = cell_cycle_prog
+    num_data[:, 1] = ref_trace
 
-    con_ratio = [i / j for i, j in zip(n_con, c_con)]
+    # mean absolute error
+    mae = np.mean(np.abs(exp_data - num_data))
+    mae = round(mae, 4)
+
+    # mean squared error
+    mse = np.mean(np.square(exp_data - num_data))
+    mse = round(mse, 4)
 
     # fit polynomial through the data to make it look neater
     polfit = np.polyfit(cell_cycle_prog, con_ratio, 10)
@@ -100,12 +99,14 @@ def plot_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc, cv_func,
     save_figure(f"./output/{averages_file}/nuc_concentration.png")
 
     fig, ax = plt.subplots()
-    ax.plot(cell_cycle_prog, con_ratio, c='grey', lw=2, alpha=0.7)
-    ax.plot(cell_cycle_prog, poly_y, c='darkred', lw=4, alpha=0.8)
+    ax.plot(cell_cycle_prog, poly_y, c='darkred', lw=4, alpha=0.8, label="Model prediction")
+    ax.plot(cell_cycle_prog, ref_trace, c='grey', lw=2, alpha=0.6, label=f"{ref_trace_file.split('.')[0]} reference")
     plt.title(f"Nuclear to cytosolic protein concentration ratio\nParams: kIn base"
-              f": {round(kIn_base, 6)}, kOut base: {round(kOut_base, 6)}, kIn mp: {kin_mp}, kOut mp: {kout_mp}")
+              f": {round(kIn_base, 6)}, kOut base: {round(kOut_base, 6)}, kIn mp: {kin_mp}, kOut mp: {kout_mp}"
+              f"\nMean absolute error: {mae}, Mean squared error: {mse}")
     plt.xlabel("Cell cycle progression")
     plt.ylabel("Ratio")
+    plt.legend()
     save_figure(f"./output/{averages_file}/nc_concentration_ratio.png")
 
 
