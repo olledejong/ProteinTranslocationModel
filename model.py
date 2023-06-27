@@ -26,8 +26,8 @@ np0 = 10  # initial nuclear protein abundance
 ks = 0.25  # synthesis rate of protein in cytosol
 kd = log(2) / 35  # degradation rate for protein
 kIn = 0.6931471805599453  # rate of translocation into nucleus
-kIn_mp = 1  # the higher this is, the higher the maximum of the nuclear import rate curve
 kOut = 0.027087843259645444  # rate of translocation out of nucleus
+kIn_mp = 1  # the higher this is, the higher the maximum of the nuclear import rate curve
 kOut_mp = 3  # the higher this is, the higher the maximum of the nuclear export rate curve
 nuc_div_tp = 91  # simulated point at which nuclear division takes place
 

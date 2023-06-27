@@ -101,9 +101,11 @@ def plot_concentration_ratio(final_tspan, c_con, n_con, con_ratio, kIn_base, kOu
     fig, ax = plt.subplots()
     ax.plot(cell_cycle_prog, poly_y, c='darkred', lw=4, alpha=0.8, label="Model prediction")
     ax.plot(cell_cycle_prog, ref_trace, c='grey', lw=2, alpha=0.6, label=f"{ref_trace_file.split('.')[0]} reference")
-    plt.title(f"Nuclear to cytosolic protein concentration ratio\nParams: kIn base"
-              f": {round(kIn_base, 6)}, kOut base: {round(kOut_base, 6)}, kIn mp: {kin_mp}, kOut mp: {kout_mp}"
-              f"\nMean absolute error: {mae}, Mean squared error: {mse}")
+    plt.title(
+        f"Nuclear to cytosolic protein concentration ratio\nParams: kIn base"
+        f": {round(kIn_base, 6)}, kOut base: {round(kOut_base, 6)}, kIn mp: {kin_mp}, kOut mp: {kout_mp}"
+        f"\nMean absolute error: {mae}, Mean squared error: {mse}"
+    )
     plt.xlabel("Cell cycle progression")
     plt.ylabel("Ratio")
     plt.legend()
