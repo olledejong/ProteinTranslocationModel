@@ -26,8 +26,8 @@ ks = 0.25  # synthesis rate of protein in cytosol
 kd = log(2) / 35  # degradation rate for protein
 kIn = 0.6931471805599453  # rate of translocation into nucleus
 kOut = 0.044742458112988236  # rate of translocation out of nucleus
-kIn_mp = 1.4  # the higher this is, the higher the maximum of the nuclear import rate curve
-kOut_mp = 1  # the higher this is, the higher the maximum of the nuclear export rate curve
+kIn_mp = 1  # the higher this is, the higher the maximum of the nuclear import rate curve
+kOut_mp = 3  # the higher this is, the higher the maximum of the nuclear export rate curve
 nuc_div_tp = 91  # simulated point at which nuclear division takes place
 
 num_cycles = 6  # number of cycles to include in the multiple-cycles plot
@@ -76,8 +76,9 @@ def load_and_adjust_data():
     nuc_surf_areas[peak_of_nuc_vol:nuc_div_tp] = nuc_surf_areas[peak_of_nuc_vol]
     nuc_surf_areas[nuc_div_tp:] = [nuc_surf_areas[0]] * len(nuc_surf_areas[nuc_div_tp:])
 
-    # whole-cell volumes
-    cell_vols[-1] = cell_vols[0]  # we assume that the whole-cell volume returns to start value
+    # we assume that the whole-cell and cytosolic volume return to start value
+    cell_vols[-1] = cell_vols[0]
+    cyt_vols[-1] = cyt_vols[0]
 
     # plot the volumes after the alterations
     plotting.plot_volumes(t_range, cyt_vols, nuc_vols, "after")
@@ -119,8 +120,6 @@ def get_k_in(t, k_in, k_in_mp):
     :param k_in_mp:
     :return:
     """
-    k_in = k_in / np.average(nuc_surf_areas)
-    if t > 76: return k_in / 2
     return k_in_mp / 80 * exp(-(t - 12)**2 / 2 * 0.09) + k_in
 
 
@@ -133,7 +132,6 @@ def get_k_out(t, k_out, k_out_mp):
     :param k_out_mp:
     :return:
     """
-    k_out = k_out / np.average(nuc_surf_areas)
     return k_out_mp / 2 * exp(0.1 * (t - 145)) + k_out
 
 
@@ -163,6 +161,11 @@ def dp_dt(y, t, k_d, k_s, k_in, k_in_mp, k_out, k_out_mp):
     A = nsa_func(t)  # nuclear surface area at t
     Vc = wc_v_func(t)  # whole cell volume at t
     Vn = nuc_v_func(t)  # nuclear volume at t
+
+    # scale using average nuclear surface
+    k_in = k_in / np.average(nuc_surf_areas)
+    k_out = k_out / np.average(nuc_surf_areas)
+
     k_out = get_k_out(t, k_out, k_out_mp)
     k_in = get_k_in(t, k_in, k_in_mp)
 
