@@ -19,16 +19,15 @@ ref_trace_file_path = f"./reference_traces/{ref_trace_file}"
                                             ### Model parameters ###
                                             ########################
 
-
 cp0 = 200  # initial cytosolic protein abundance
 np0 = 10  # initial nuclear protein abundance
 
 ks = 0.25  # synthesis rate of protein in cytosol
 kd = log(2) / 35  # degradation rate for protein
 kIn = 0.6931471805599453  # rate of translocation into nucleus
-kOut = 0.027087843259645444  # rate of translocation out of nucleus
-kIn_mp = 1  # the higher this is, the higher the maximum of the nuclear import rate curve
-kOut_mp = 3  # the higher this is, the higher the maximum of the nuclear export rate curve
+kOut = 0.044742458112988236  # rate of translocation out of nucleus
+kIn_mp = 1.4  # the higher this is, the higher the maximum of the nuclear import rate curve
+kOut_mp = 1  # the higher this is, the higher the maximum of the nuclear export rate curve
 nuc_div_tp = 91  # simulated point at which nuclear division takes place
 
 num_cycles = 6  # number of cycles to include in the multiple-cycles plot
@@ -38,8 +37,8 @@ num_datapoints = 100  # the desired number of datapoints that is solved for with
                                             ### Global variables ###
                                             ########################
 
-cell_vols, nuc_vols, nuc_surface_areas = [], [], []
-a_func, cv_func, nv_func = interp1d.__class__, interp1d.__class__, interp1d.__class__
+cell_vols, nuc_vols, cyt_vols, nuc_surf_areas = [], [], [], []
+nsa_func, wc_v_func, cyt_v_func, nuc_v_func = interp1d.__class__, interp1d.__class__, interp1d.__class__, interp1d.__class__
 
                                             ########################
                                             ### Data preparation ###
@@ -53,34 +52,35 @@ def load_and_adjust_data():
       - Nuclear volume and surf area stays constant from local high up until division point
     :return:
     """
-    global cell_vols, nuc_vols, nuc_surface_areas
+    global cell_vols, nuc_vols, cyt_vols, nuc_surf_areas
     averages = pd.read_excel(averages_file)
 
-    # plot the raw average values for completeness
+    # variable for all datatypes
+    nuc_vols = averages.nuc_volumes.values
+    nuc_surf_areas = averages.nuc_surface_areas.values
+    cell_vols = averages.cell_volumes.values
+    cyt_vols = np.subtract(averages.cell_volumes.values, averages.nuc_volumes.values)
+
     t_range = np.arange(len(averages.cell_volumes.values))
-    plotting.plot_volumes(t_range, averages.cell_volumes.values, averages.nuc_volumes.values)
+
+    # plot the raw average volume values
+    plotting.plot_volumes(t_range, cyt_vols, averages.nuc_volumes.values, "before")
 
     # nuclear volume over time (altered to simulate instant nuclear division)
-    nv = averages.nuc_volumes.values
-    peak_of_nuc_vol = np.argmax(nv)  # position of the volume peak of the nucleus
-    nv[peak_of_nuc_vol:nuc_div_tp] = nv[peak_of_nuc_vol]  # up until nuc div, the nuc vol stays constant at its high
-    nv[nuc_div_tp:] = [nv[0]] * len(nv[nuc_div_tp:])  # after nuclear separation, the volume returns to the starting val
-    nuc_vols = np.append(nv, [nv[0], nv[0]])
+    peak_of_nuc_vol = np.argmax(nuc_vols)  # position of the volume peak of the nucleus
+    nuc_vols[peak_of_nuc_vol:nuc_div_tp] = nuc_vols[peak_of_nuc_vol]  # up until nuc div, the nuc vol stays constant at its high
+    nuc_vols[nuc_div_tp:] = [nuc_vols[0]] * len(nuc_vols[nuc_div_tp:])  # after nuclear separation, the volume returns to the starting val
 
     # nuclear surface area over time (altered such that it simulates a proportional decrease compared to nuclear volume)
     # basically the same as done above
-    nsa = averages.nuc_surface_areas.values
-    nsa[peak_of_nuc_vol:nuc_div_tp] = nsa[peak_of_nuc_vol]
-    nsa[nuc_div_tp:] = [nsa[0]] * len(nsa[nuc_div_tp:])
-    nuc_surface_areas = np.append(nsa, [nsa[0], nsa[0]])
+    nuc_surf_areas[peak_of_nuc_vol:nuc_div_tp] = nuc_surf_areas[peak_of_nuc_vol]
+    nuc_surf_areas[nuc_div_tp:] = [nuc_surf_areas[0]] * len(nuc_surf_areas[nuc_div_tp:])
 
     # whole-cell volumes
-    cv = averages.cell_volumes.values
-    cv[-1] = cv[0]  # we assume that the whole-cell volume returns to start value
-    cell_vols = np.append(cv, [cv[0], cv[0]])
+    cell_vols[-1] = cell_vols[0]  # we assume that the whole-cell volume returns to start value
 
-    # generate interp1d functions so the area and vols can be retrieved for any t
-    define_interpolated_functions()
+    # plot the volumes after the alterations
+    plotting.plot_volumes(t_range, cyt_vols, nuc_vols, "after")
 
 
 def define_interpolated_functions():
@@ -89,12 +89,13 @@ def define_interpolated_functions():
     whole-cell volume. Using these, the area and vols can be retrieved for any t within the 0 to 100 range.
     :return:
     """
-    global a_func, cv_func, nv_func
+    global nsa_func, wc_v_func, cyt_v_func, nuc_v_func
     # interpolated vol/area functions for time dependent retrieval of values
-    t_range = np.arange(len(nuc_surface_areas))
-    a_func = interp1d(t_range, nuc_surface_areas, kind='linear', bounds_error=False)
-    cv_func = interp1d(t_range, cell_vols, kind='linear', bounds_error=False)
-    nv_func = interp1d(t_range, nuc_vols, kind='linear', bounds_error=False)
+    t_range = np.arange(len(nuc_surf_areas))
+    nsa_func = interp1d(t_range, nuc_surf_areas, kind='linear', bounds_error=False)
+    wc_v_func = interp1d(t_range, cell_vols, kind='linear', bounds_error=False)
+    cyt_v_func = interp1d(t_range, cyt_vols, kind='linear', bounds_error=False)
+    nuc_v_func = interp1d(t_range, nuc_vols, kind='linear', bounds_error=False)
 
 
 def find_nearest(array, value):
@@ -118,7 +119,8 @@ def get_k_in(t, k_in, k_in_mp):
     :param k_in_mp:
     :return:
     """
-    k_in = k_in / np.average(nuc_surface_areas)
+    k_in = k_in / np.average(nuc_surf_areas)
+    if t > 76: return k_in / 2
     return k_in_mp / 80 * exp(-(t - 12)**2 / 2 * 0.09) + k_in
 
 
@@ -131,7 +133,7 @@ def get_k_out(t, k_out, k_out_mp):
     :param k_out_mp:
     :return:
     """
-    k_out = k_out / np.average(nuc_surface_areas)
+    k_out = k_out / np.average(nuc_surf_areas)
     return k_out_mp / 2 * exp(0.1 * (t - 145)) + k_out
 
 
@@ -155,10 +157,12 @@ def dp_dt(y, t, k_d, k_s, k_in, k_in_mp, k_out, k_out_mp):
     :param k_out_mp: nuclear export rate multiplier
     :return:
     """
+    if t > 99.0: t = 99.0  # prevent that t overshoots value of t, since the volumes and area are not defined there
+
     C, N = y  # cellular and nuclear abundance of protein
-    A = a_func(t)  # nuclear surface area at t
-    Vc = cv_func(t)  # whole cell volume at t
-    Vn = nv_func(t)  # nuclear volume at t
+    A = nsa_func(t)  # nuclear surface area at t
+    Vc = wc_v_func(t)  # whole cell volume at t
+    Vn = nuc_v_func(t)  # nuclear volume at t
     k_out = get_k_out(t, k_out, k_out_mp)
     k_in = get_k_in(t, k_in, k_in_mp)
 
@@ -175,14 +179,14 @@ def dp_dt(y, t, k_d, k_s, k_in, k_in_mp, k_out, k_out_mp):
                                             ### Running simulations ###
                                             ###########################
 
-def simulate(cp0, np0):
+def simulate():
     """
     Function that simulates the protein abundance dynamics over the duration of a cell cycle based on the initial
     conditions and the desired amount of cycles.
-    :param cp0: initial cytosolic protein abundance
-    :param np0: initial nuclear protein abundance
     :return:
     """
+    global cp0, np0
+
     nuc_ab_loss_frac = (np.amax(nuc_vols) - nuc_vols[-1]) / np.amax(nuc_vols)
     whole_vol_loss_frac = 1 - cell_vols[-1] / cell_vols[-4]  # fraction of volume that is lost to the daughter bud
     print(f"Percentage of nuclear protein abundance lost at nuclear division: {round(nuc_ab_loss_frac * 100, 2)}%")
@@ -236,9 +240,8 @@ def calc_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc):
     :return:
     """
     # get cell / nuc volumes for all timepoints
-    whole_cell_vols = np.array([cv_func(t).flatten()[0] for t in final_tspan])
-    nuclear_vols = np.array([nv_func(t).flatten()[0] for t in final_tspan])
-    cytosolic_vols = np.subtract(whole_cell_vols, nuclear_vols)
+    cytosolic_vols = np.array([cyt_v_func(t).flatten()[0] for t in final_tspan])
+    nuclear_vols = np.array([nuc_v_func(t).flatten()[0] for t in final_tspan])
 
     # calculate the concentrations
     cyt_con = np.divide(one_cycle_cyt, cytosolic_vols)
@@ -252,10 +255,10 @@ def main():
     define_interpolated_functions()
 
     ref_trace_pd = pd.read_excel(ref_trace_file_path)
-    ref_trace = np.insert(ref_trace_pd.values.flatten(), 0, ref_trace_pd.columns[0], )
+    ref_trace = np.insert(ref_trace_pd.values.flatten(), 0, ref_trace_pd.columns[0])
 
     # perform model simulations
-    final_tspan, mult_cycles_cyt, mult_cycles_nuc = simulate(cp0, np0)
+    final_tspan, mult_cycles_cyt, mult_cycles_nuc = simulate()
 
     # get one cycle for plotting purposes
     one_cycle_cyt = np.array(mult_cycles_cyt[len(mult_cycles_cyt)-num_datapoints:])

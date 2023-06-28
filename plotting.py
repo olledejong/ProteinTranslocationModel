@@ -28,11 +28,9 @@ def save_figure(path, bbox_inches='tight', dpi=300):
     plt.close()
 
 
-def plot_volumes(tspan, cell_vols, nuc_vols):
-    cyt_vols = [i - j for i, j in zip(cell_vols, nuc_vols)]
-
+def plot_volumes(tspan, cyt_vols, nuc_vols, flag):
     fig, ax1 = plt.subplots()
-    fig.suptitle("Cytosolic and nuclear volumes over time")
+    fig.suptitle(f"Cytosolic and nuclear volumes over time ({flag} manual alterations)")
     ax1.set_xlabel('Cell cycle progression')
     ax1.grid(False)
     ax1.set_ylabel("Cytosolic volume", color='orange')
@@ -43,7 +41,7 @@ def plot_volumes(tspan, cell_vols, nuc_vols):
     ax2.set_ylabel("Nuclear volume", color='darkblue')
     ax2.plot(tspan / 100, nuc_vols, color='darkblue')
     ax2.tick_params(axis='y', labelcolor='darkblue')
-    save_figure(f"./output/{averages_file}/combined_volumes.png")
+    save_figure(f"./output/{averages_file}/combined_volumes_{flag}.png")
 
 
 def plot_abundances(tspan, y1, y2):
