@@ -89,11 +89,12 @@ def plot_concentration_prediction(t_span, con_ratio, kIn_base, kOut_base):
     save_figure(f"./output/{averages_file}/nc_concentration_ratio.png")
 
 
-def plot_prediction_vs_reference(t_span, c_con, n_con, con_ratio, kIn_base, kOut_base, kin_mp, kout_mp, ref_trace):
+def plot_prediction_vs_reference(t_span, c_con, n_con, con_ratio, kIn_base, kOut_base, kin_mp, kout_mp, ref_trace, normalize):
     cell_cycle_prog = t_span / 100  # convert x axis to cell cycle progression
 
-    con_ratio = con_ratio / np.average(con_ratio)
-    ref_trace = ref_trace / np.average(ref_trace)
+    if normalize:
+        con_ratio = con_ratio / np.average(con_ratio)
+        ref_trace = ref_trace / np.average(ref_trace)
 
     mae, mse = get_similarity_measure(cell_cycle_prog, con_ratio, ref_trace)
 
