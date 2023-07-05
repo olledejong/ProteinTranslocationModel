@@ -16,16 +16,11 @@ averages_file = "./averages.xlsx"
 ref_trace_file = "Sfp1_WT.xlsx"
 ref_trace_file_path = f"./reference_traces/{ref_trace_file}"
 
-
-                                            ########################
-                                            ### Global variables ###
-                                            ########################
+# -------------------- Globals
 
 nsa_func, wc_v_func, cyt_v_func, nuc_v_func = None, None, None, None
 
-                                            ########################
-                                            ### Data preparation ###
-                                            ########################
+# -------------------- Data preparation
 
 def load_and_adjust_data():
     """
@@ -83,6 +78,7 @@ def define_interpolated_functions(cell_vols, cyt_vols, nuc_vols, nuc_surf_areas)
     cyt_v_func = interp1d(t_range, cyt_vols, kind='linear', bounds_error=False)
     nuc_v_func = interp1d(t_range, nuc_vols, kind='linear', bounds_error=False)
 
+# -------------------- Other functions
 
 def calc_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc):
     """
@@ -102,10 +98,7 @@ def calc_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc):
 
     return cyt_con, nuc_con, np.divide(nuc_con, cyt_con)
 
-
-                                                #################
-                                                ### The Model ###
-                                                #################
+# -------------------- The model
 
 def get_k_in(t, k_in, k_in_mp):
     """
@@ -178,9 +171,7 @@ def dp_dt(y, t, k_d, k_s, k_in, k_in_mp, k_out, k_out_mp, average_nuclear_surfac
 
     return [dC_dt, dN_dt]
 
-                                            ###########################
-                                            ### Running simulations ###
-                                            ###########################
+# -------------------- Model simulation
 
 def simulate(cell_vols, cyt_vols, nuc_vols, nuc_surf_areas):
     """
@@ -239,6 +230,7 @@ def simulate(cell_vols, cyt_vols, nuc_vols, nuc_surf_areas):
 
     return tspan_whole, mult_cycles_cyt, mult_cycles_nuc
 
+# -------------------- Main (start-point)
 
 def main():
     cell_vols, cyt_vols, nuc_vols, nuc_surf_areas = load_and_adjust_data()
@@ -262,7 +254,6 @@ def main():
     plot.plot_prediction_vs_reference(
         final_tspan, cyt_con, nuc_con, con_ratio, params.kIn, params.kOut, params.kIn_mp, params.kOut_mp, ref_trace
     )
-    plot.plot_multiple_cycles(final_tspan, mult_cycles_cyt, mult_cycles_nuc, params.num_cycles)
 
 
 if __name__ == '__main__':
