@@ -30,17 +30,17 @@ def save_figure(path, bbox_inches='tight', dpi=300):
 
 def plot_volumes(tspan, cyt_vols, nuc_vols, flag):
     fig, ax1 = plt.subplots()
-    fig.suptitle(f"Cytosolic and nuclear volumes over time ({flag} manual alterations)")
+    fig.suptitle(f"Cytosolic and nuclear volumes over time ({flag} manual alterations)", y=0.95)
     ax1.set_xlabel('Cell cycle progression')
     ax1.grid(False)
-    ax1.set_ylabel("Cytosolic volume", color='orange')
-    ax1.plot(tspan / 100, cyt_vols, color='orange')
-    ax1.tick_params(axis='y', labelcolor='orange')
+    ax1.set_ylabel("Cytosolic volume", color='darkcyan')
+    ax1.plot(tspan / 100, cyt_vols, c='darkcyan', lw=3, alpha=0.8)
+    ax1.tick_params(axis='y', labelcolor='darkcyan')
     ax2 = ax1.twinx()
     ax2.grid(False)
-    ax2.set_ylabel("Nuclear volume", color='darkblue')
-    ax2.plot(tspan / 100, nuc_vols, color='darkblue')
-    ax2.tick_params(axis='y', labelcolor='darkblue')
+    ax2.set_ylabel("Nuclear volume", color='darkred')
+    ax2.plot(tspan / 100, nuc_vols, c='darkred', lw=3, alpha=0.8)
+    ax2.tick_params(axis='y', labelcolor='darkred')
     save_figure(f"./output/{averages_file}/combined_volumes_{flag}.png")
 
 
@@ -60,8 +60,33 @@ def plot_abundances(tspan, y1, y2):
     save_figure(f"./output/{averages_file}/abundances.png")
 
 
+def plot_concentration_prediction_only(final_tspan, con_ratio, kIn_base, kOut_base):
+    cell_cycle_prog = final_tspan / 100  # convert x axis to cell cycle progression
+
+    con_ratio = con_ratio / np.average(con_ratio)
+
+    # fit polynomial through the data to make it look neater
+    polfit = np.polyfit(cell_cycle_prog, con_ratio, 10)
+    poly_y = np.polyval(polfit, cell_cycle_prog)
+
+    fig, ax = plt.subplots()
+    ax.plot(cell_cycle_prog, con_ratio, c='grey', lw=2, alpha=0.6, label="Raw prediction")
+    ax.plot(cell_cycle_prog, poly_y, c='darkred', lw=4, alpha=0.8, label="Polynomial prediction")
+    plt.title(
+        f"Sfp1 N/C concentration ratio"
+        f"\nParams: kIn base: {round(kIn_base, 6)}, kOut base: {round(kOut_base, 6)}"
+    )
+    plt.xlabel("Cell cycle progression")
+    plt.ylabel("N/C concentration ratio")
+    plt.legend()
+    save_figure(f"./output/{averages_file}/nc_concentration_ratio.png")
+
+
 def plot_concentration_ratio(final_tspan, c_con, n_con, con_ratio, kIn_base, kOut_base, kin_mp, kout_mp, ref_trace):
     cell_cycle_prog = final_tspan / 100  # convert x axis to cell cycle progression
+
+    con_ratio = con_ratio / np.average(con_ratio)
+    ref_trace = ref_trace / np.average(ref_trace)
 
     # calculate curve similarity
     exp_data = np.zeros((100, 2))
