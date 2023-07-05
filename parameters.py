@@ -5,6 +5,7 @@ from math import log
 num_cycles = 6  # number of cycles to run
 num_datapoints = 100  # the desired number of datapoints that is solved for within the time-axis
 nuc_div_tp = 91  # simulated point at which nuc division takes place (based on volume drop-off time-point of nuc vol)
+normalize = False  # whether to normalize the compared traces or not
 
 # -------------------- Initial conditions
 
