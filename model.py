@@ -126,6 +126,7 @@ def get_k_out(t, k_out, k_out_mp):
     :return:
     """
     # return 0.027 * exp(-(t - 93) ** 2 / 2 * 0.35) + k_out  # gaussian increase in kOut around t = 93
+    return k_out  # in this case, when we use a decrease in k_in, we make k_out a constant
 
 def dp_dt(y, t, k_d, k_s, k_in, k_in_mp, k_out, k_out_mp, average_nuclear_surface_area):
     """
@@ -159,7 +160,7 @@ def dp_dt(y, t, k_d, k_s, k_in, k_in_mp, k_out, k_out_mp, average_nuclear_surfac
     k_in = k_in / average_nuclear_surface_area
     k_out = k_out / average_nuclear_surface_area
 
-    # k_out = get_k_out(t, k_out, k_out_mp)
+    k_out = get_k_out(t, k_out, k_out_mp)
     k_in = get_k_in(t, k_in, k_in_mp)
 
     ts.append(t)
@@ -184,7 +185,6 @@ def simulate(cell_vols, cyt_vols, nuc_vols, nuc_surf_areas):
 
     nuc_ab_loss_frac = (np.amax(nuc_vols) - nuc_vols[-1]) / np.amax(nuc_vols)  # nuc ab loss prop. to nuc volume los
     whole_vol_loss_frac = 1 - cell_vols[-1] / cell_vols[-4]  # cytosolic ab loss proportional to whole-cell vol loss
-    print(1 - cyt_vols[-1] / cyt_vols[-4])
     print(f"Percentage of nuclear protein abundance lost at nuclear division: {round(nuc_ab_loss_frac * 100, 2)}%")
     print(f"Percentage of whole-cell volume lost at division (end of cycle): {round(whole_vol_loss_frac * 100, 2)}%")
 
