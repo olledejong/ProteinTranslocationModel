@@ -89,7 +89,7 @@ def plot_concentration_prediction(t_span, con_ratio, kIn_base, kOut_base):
     save_figure(f"./output/{averages_file}/nc_concentration_ratio.png")
 
 
-def plot_prediction_vs_reference(t_span, c_con, n_con, con_ratio, kIn_base, kOut_base, kin_mp, kout_mp, ref_trace):
+def plot_prediction_vs_reference(t_span, con_ratio, count, kIn_base, kOut_base, kin_mp, kout_mp, ref_trace):
     cell_cycle_prog = t_span / 100  # convert x axis to cell cycle progression
 
     con_ratio = con_ratio / np.average(con_ratio)
@@ -101,20 +101,21 @@ def plot_prediction_vs_reference(t_span, c_con, n_con, con_ratio, kIn_base, kOut
     polfit = np.polyfit(cell_cycle_prog, con_ratio, 10)
     poly_y = np.polyval(polfit, cell_cycle_prog)
 
-    plot_separate_concentrations(c_con, cell_cycle_prog, n_con)
-
     fig, ax = plt.subplots()
     ax.plot(cell_cycle_prog, poly_y, c='darkred', lw=4, alpha=0.8, label="Model prediction")
     ax.plot(cell_cycle_prog, ref_trace, c='grey', lw=2, alpha=0.6, label=f"{ref_trace_file.split('.')[0]} reference")
     plt.title(
-        f"Nuclear to cytosolic protein concentration ratio\nParams: kIn base"
-        f": {round(kIn_base, 6)}, kOut base: {round(kOut_base, 6)}, kIn mp: {kin_mp}, kOut mp: {kout_mp}"
+        f"Nuclear to cytosolic protein concentration ratio\nParams: kIn base: {round(kIn_base, 6)}, kOut base:"
+        f" {round(kOut_base, 6)}, kIn mp: {round(kin_mp, 4)}, kOut mp: {round(kout_mp, 4)}"
         f"\nMean absolute error: {mae}, Mean squared error: {mse}"
     )
     plt.xlabel("Cell cycle progression")
     plt.ylabel("Ratio")
     plt.legend()
-    save_figure(f"./output/{averages_file}/nc_concentration_ratio.png")
+
+    # save results one directory up
+    save_figure(f"../Model_vs_Reference/{ref_trace_file}/nc_con_ratios/{averages_file}/plot{count}.png")
+    return mse
 
 
 def get_similarity_measure(cell_cycle_prog, con_ratio, ref_trace):
@@ -165,11 +166,12 @@ def plot_separate_concentrations(c_con, cell_cycle_prog, n_con):
     save_figure(f"./output/{averages_file}/nuc_concentration.png")
 
 
-def plot_rates(t_values, k_out_values, k_in_values):
+def plot_rates(t_values, k_out_values, k_in_values, count):
     """
     In order to intuitively assess what rate(s) (curves) underlay the observed concentration ratio, this function
     plots the rates in one figure.
 
+    :param count:
     :param t_values:
     :param k_out_values:
     :param k_in_values:
@@ -182,4 +184,6 @@ def plot_rates(t_values, k_out_values, k_in_values):
     plt.xlabel("Cell cycle progression")
     plt.ylabel("Rate")
     plt.legend(loc='best')
-    save_figure(f"./output/{averages_file}/rates.png")
+
+    # save results one directory up
+    save_figure(f"../Model_vs_Reference/{ref_trace_file}/rates/{averages_file}/plot{count}.png")

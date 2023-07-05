@@ -2,7 +2,7 @@ import sys
 import traceback
 import numpy as np
 import pandas as pd
-from math import exp
+from math import exp, log, log10
 from scipy.integrate import odeint
 from scipy.interpolate import interp1d
 import parameters as params
@@ -110,10 +110,7 @@ def get_k_in(t, k_in, k_in_mp):
     :param k_in_mp:
     :return:
     """
-    if t > 60:  # only use this function towards the end of the cell cycle
-        return -(k_in_mp / 45 * exp(-(t - 93)**2 / 2 * 0.06)) + k_in  # decrease in kIn around nuclear division
-    else:
-        return k_in_mp / 80 * exp(-(t - 12)**2 / 2 * 0.09) + k_in  # increase during G1
+    return k_in_mp / 80 * exp(-(t - 12)**2 / 2 * 0.09) + k_in
 
 
 def get_k_out(t, k_out, k_out_mp):
@@ -125,8 +122,7 @@ def get_k_out(t, k_out, k_out_mp):
     :param k_out_mp:
     :return:
     """
-    # return 0.027 * exp(-(t - 93) ** 2 / 2 * 0.35) + k_out  # gaussian increase in kOut around t = 93
-    return k_out  # in this case, when we use a decrease in k_in, we make k_out a constant
+    return k_out_mp / 2 * exp(0.28 * (t - 115)) + k_out
 
 def dp_dt(y, t, k_d, k_s, k_in, k_in_mp, k_out, k_out_mp, average_nuclear_surface_area):
     """
@@ -174,7 +170,7 @@ def dp_dt(y, t, k_d, k_s, k_in, k_in_mp, k_out, k_out_mp, average_nuclear_surfac
 
 # -------------------- Model simulation
 
-def simulate(cell_vols, cyt_vols, nuc_vols, nuc_surf_areas):
+def simulate(cell_vols, nuc_vols, nuc_surf_areas, kIn_base, kIn_mp, kOut_base, kOut_mp):
     """
     Function that simulates the protein abundance dynamics over the duration of a cell cycle based on the initial
     conditions and the desired amount of cycles.
@@ -185,8 +181,6 @@ def simulate(cell_vols, cyt_vols, nuc_vols, nuc_surf_areas):
 
     nuc_ab_loss_frac = (np.amax(nuc_vols) - nuc_vols[-1]) / np.amax(nuc_vols)  # nuc ab loss prop. to nuc volume los
     whole_vol_loss_frac = 1 - cell_vols[-1] / cell_vols[-4]  # cytosolic ab loss proportional to whole-cell vol loss
-    print(f"Percentage of nuclear protein abundance lost at nuclear division: {round(nuc_ab_loss_frac * 100, 2)}%")
-    print(f"Percentage of whole-cell volume lost at division (end of cycle): {round(whole_vol_loss_frac * 100, 2)}%")
 
     # arrays to store the results of multiple cycles in
     mult_cycles_cyt, mult_cycles_nuc = [], []
@@ -200,7 +194,7 @@ def simulate(cell_vols, cyt_vols, nuc_vols, nuc_surf_areas):
 
         # solve the ode up until the nuclear division event
         sols_be = odeint(dp_dt, [cp0, np0], tspan_before, args=(
-            params.kd, params.ks, params.kIn, params.kIn_mp, params.kOut, params.kOut_mp, average_nuc_surf_area
+            params.kd, params.ks, kIn_base, kIn_mp, kOut_base, kOut_mp, average_nuc_surf_area
         ))
 
         # simulate nuclear division event (reduction of nuclear abundance proportional to loss in nuc vol)
@@ -211,7 +205,7 @@ def simulate(cell_vols, cyt_vols, nuc_vols, nuc_surf_areas):
 
         # simulate the dynamics after the nuclear division event
         sols_ae = odeint(dp_dt, ab_after_event, tspan_after, args=(
-            params.kd, params.ks, params.kIn, params.kIn_mp, params.kOut, params.kOut_mp, average_nuc_surf_area
+            params.kd, params.ks, kIn_base, kIn_mp, kOut_base, kOut_mp, average_nuc_surf_area
         ))
 
         # simulate the bud separation event by reducing the cytosolic abundance in proportion to the volume loss
@@ -239,21 +233,56 @@ def main():
     ref_trace_pd = pd.read_excel(ref_trace_file_path)
     ref_trace = np.insert(ref_trace_pd.values.flatten(), 0, ref_trace_pd.columns[0])
 
-    # perform model simulations
-    final_tspan, mult_cycles_cyt, mult_cycles_nuc = simulate(cell_vols, cyt_vols, nuc_vols, nuc_surf_areas)
+    prev_mse = 1000  # ignore the assigned value. is reassigned every time a prediction by the model has a lower mse
+    best_result = 'placeholder'  # will be filled with parameters for simulation that is most comparable to reference
+    best_plot = 'placeholder'
+    num_samples = 5  # number of samples to grab from logistic range of base values
 
-    # get final cycle for plotting purposes
-    one_cycle_cyt = np.array(mult_cycles_cyt[len(mult_cycles_cyt)-params.num_datapoints:])
-    one_cycle_nuc = np.array(mult_cycles_nuc[len(mult_cycles_cyt)-params.num_datapoints:])
+    kin_base_samples = [x for x in 10 ** np.linspace(log10(log(2)), log10(log(2) / 4), num_samples)]
+    kout_base_samples = [x for x in 10 ** np.linspace(log10(log(2) / 5), log10(log(2) / 20), num_samples)]
 
-    cyt_con, nuc_con, con_ratio = calc_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc)
+    count = 1
 
-    # plotting
-    plot.plot_rates(ts, kouts, kins)
-    plot.plot_abundances(final_tspan, one_cycle_cyt, one_cycle_nuc)
-    plot.plot_prediction_vs_reference(
-        final_tspan, cyt_con, nuc_con, con_ratio, params.kIn, params.kOut, params.kIn_mp, params.kOut_mp, ref_trace
-    )
+    for kout_base in kout_base_samples:
+        for kin_base in kin_base_samples:
+            for kin_to_multiply in kin_base_samples:
+                for kout_to_multiply in kout_base_samples:
+                    multiplier_kin = (kin_base_samples.index(kin_to_multiply) + 1)
+                    multiplier_kout = (kout_base_samples.index(kout_to_multiply) + 1)
+
+                    # perform model simulations
+                    final_tspan, mult_cycles_cyt, mult_cycles_nuc = simulate(
+                        cell_vols, nuc_vols, nuc_surf_areas,
+                        kin_base, multiplier_kin, kout_base, multiplier_kout
+                    )
+
+                    # get final cycle for plotting purposes
+                    one_cycle_cyt = np.array(mult_cycles_cyt[len(mult_cycles_cyt)-params.num_datapoints:])
+                    one_cycle_nuc = np.array(mult_cycles_nuc[len(mult_cycles_cyt)-params.num_datapoints:])
+
+                    # plotting
+                    plot.plot_rates(ts, kouts, kins, count)
+                    ts.clear()
+                    kouts.clear()
+                    kins.clear()
+
+                    cyt_con, nuc_con, con_ratio = calc_concentration_ratio(final_tspan, one_cycle_cyt, one_cycle_nuc)
+
+                    mse = plot.plot_prediction_vs_reference(
+                        final_tspan, con_ratio, count, kin_base, kout_base, multiplier_kin, multiplier_kout, ref_trace
+                    )
+                    if mse < prev_mse:
+                        best_result = {
+                            'kIn base': kin_base,
+                            'kOut base': kout_base,
+                            'kIn mp': multiplier_kin,
+                            'kOut mp': multiplier_kout
+                        }
+                        prev_mse = mse
+                        best_plot = count
+                    count += 1
+
+    print(f"Done. Result with lowest Mean Squared Error ({prev_mse}) is: \n{str(best_result)}.\nSee plot {best_plot}.")
 
 
 if __name__ == '__main__':
