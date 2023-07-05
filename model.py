@@ -259,7 +259,7 @@ def main():
     # plotting
     plot.plot_rates(ts, kouts, kins)
     plot.plot_abundances(final_tspan, one_cycle_cyt, one_cycle_nuc)
-    plot.plot_concentration_ratio(
+    plot.plot_prediction_vs_reference(
         final_tspan, cyt_con, nuc_con, con_ratio, params.kIn, params.kOut, params.kIn_mp, params.kOut_mp, ref_trace
     )
     plot.plot_multiple_cycles(final_tspan, mult_cycles_cyt, mult_cycles_nuc, params.num_cycles)
