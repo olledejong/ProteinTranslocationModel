@@ -18,7 +18,6 @@ np0 = 10  # initial nuclear protein abundance
 
 # -------------------- Rates
 
-ks = 0.25  # synthesis rate of protein in cytosol
 kIn = log(2)  # rate of translocation into nucleus
 kOut = log(2) / 10  # rate of translocation out of nucleus
 kd = log(2) / 35  # degradation rate for protein

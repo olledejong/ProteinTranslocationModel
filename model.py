@@ -127,7 +127,7 @@ def get_k_out(t, k_out, k_out_mp):
     # return 0.027 * exp(-(t - 93) ** 2 / 2 * 0.35) + k_out  # gaussian increase in kOut around t = 93
     return k_out  # in this case, when we use a decrease in k_in, we make k_out a constant
 
-def dp_dt(y, t, k_d, k_s, k_in, k_in_mp, k_out, k_out_mp, average_nuclear_surface_area):
+def dp_dt(y, t, k_d, k_in, k_in_mp, k_out, k_out_mp, average_nuclear_surface_area):
     """
     Model that attempts to describe the change in cellular and nuclear abundances of a protein using ODEs. It is a
     constitutive model, i.e. it provides a relationship between the behavior of a protein and the forces acting on it.
@@ -166,7 +166,7 @@ def dp_dt(y, t, k_d, k_s, k_in, k_in_mp, k_out, k_out_mp, average_nuclear_surfac
     kins.append(k_in)
     kouts.append(k_out)
 
-    dC_dt = k_s * 20 + A * (-k_in * C / (Vc - Vn) + k_out * N / Vn) - k_d * C
+    dC_dt = 5 + A * (-k_in * C / (Vc - Vn) + k_out * N / Vn) - k_d * C
     dN_dt = A * (k_in * C / (Vc - Vn) - k_out * N / Vn) - k_d * N
 
     return [dC_dt, dN_dt]
@@ -199,7 +199,7 @@ def simulate(cell_vols, cyt_vols, nuc_vols, nuc_surf_areas):
 
         # solve the ode up until the nuclear division event
         sols_be = odeint(dp_dt, [cp0, np0], tspan_before, args=(
-            params.kd, params.ks, params.kIn, params.kIn_mp, params.kOut, params.kOut_mp, average_nuc_surf_area
+            params.kd, params.kIn, params.kIn_mp, params.kOut, params.kOut_mp, average_nuc_surf_area
         ))
 
         # simulate nuclear division event (reduction of nuclear abundance proportional to loss in nuc vol)
@@ -210,7 +210,7 @@ def simulate(cell_vols, cyt_vols, nuc_vols, nuc_surf_areas):
 
         # simulate the dynamics after the nuclear division event
         sols_ae = odeint(dp_dt, ab_after_event, tspan_after, args=(
-            params.kd, params.ks, params.kIn, params.kIn_mp, params.kOut, params.kOut_mp, average_nuc_surf_area
+            params.kd, params.kIn, params.kIn_mp, params.kOut, params.kOut_mp, average_nuc_surf_area
         ))
 
         # simulate the bud separation event by reducing the cytosolic abundance in proportion to the volume loss
