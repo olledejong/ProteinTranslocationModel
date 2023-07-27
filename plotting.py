@@ -37,7 +37,7 @@ def plot_volumes(tspan, cyt_vols, nuc_vols, flag):
     :return:
     """
     fig, ax1 = plt.subplots()
-    fig.suptitle(f"Cytosolic and nuclear volumes over time ({flag} manual alterations)", y=0.95)
+    fig.suptitle(f"Cytosolic and nuclear volumes over the cell cycle ({flag} manual alterations)", y=0.95)
     ax1.set_xlabel('Cell cycle progression')
     ax1.grid(False)
     ax1.set_ylabel("Cytosolic volume", color='darkcyan')
